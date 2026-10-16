@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서울특별시 서대문구는 어떻게 달라졌을까? | 지역 조사 학습지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<style>
+:root{
+  --map:#eef2ec;--sheet:#fff;--ink:#1b2b3a;--muted:#5d6b75;--rule:#cfd8d0;
+  --water:#2c6e9b;--water-soft:#e3eef6;--veg:#4f7f4e;--veg-soft:#e6efe2;
+  --contour:#a87a35;--contour-soft:#f5ecdc;--road:#c2412d;--road-soft:#fbeeeb;
+  --font:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+html{scroll-padding-top:80px}
+body{font-family:var(--font);color:var(--ink);background:var(--map);font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--water)}
+:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+
+.topbar{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar h1{font-size:17px;margin:0;font-weight:700}
+.topbar .region{font-size:13px;color:#c9d6e0;padding:3px 10px;border:1px solid #3b5164;border-radius:20px}
+.topbar .spacer{flex:1}
+.topbar .status{font-size:12.5px;color:#9fb3c2}
+.topbar .status.dirty{color:#ffd08a}
+
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:8px;padding:9px 16px;font-weight:600;font-size:14.5px;cursor:pointer;text-decoration:none;line-height:1.2;transition:background .15s,border-color .15s}
+.btn-primary{background:var(--water);color:#fff}.btn-primary:hover{background:#235b81}
+.btn-ghost{background:#fff;border-color:var(--rule);color:var(--ink)}.btn-ghost:hover{border-color:var(--ink)}
+.btn-light{background:#fff;color:var(--ink)}.btn-light:hover{background:#e8eef3}
+.btn-sm{padding:6px 12px;font-size:13.5px}
+.btn-add{width:100%;justify-content:center;border:2px dashed var(--rule);background:transparent;color:var(--muted);padding:12px}
+.btn-add:hover{border-color:var(--water);color:var(--water)}
+
+.layout{display:grid;grid-template-columns:262px minmax(0,1fr);max-width:1260px;margin:0 auto;gap:28px;padding:28px 20px 80px}
+
+/* 단계 메뉴: 답사 경로 */
+.route{position:sticky;top:80px;align-self:start}
+.route-title{font-size:13px;color:var(--muted);margin:0 0 12px 4px}
+.route ol{list-style:none;margin:0;padding:0;position:relative}
+.route ol::before{content:"";position:absolute;left:19px;top:20px;bottom:20px;border-left:3px dashed var(--contour);opacity:.55}
+.route button{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;background:none;border:0;padding:10px 8px;border-radius:10px;cursor:pointer}
+.route button:hover{background:rgba(255,255,255,.6)}
+.route .pin{flex:none;width:24px;height:24px;border-radius:50%;background:var(--sheet);border:3px solid var(--contour);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--contour);position:relative;z-index:1;margin-top:1px}
+.route .lbl{display:flex;flex-direction:column;min-width:0;flex:1}
+.route .lbl b{font-size:15px;font-weight:600}
+.route .lbl small{font-size:12.5px;color:var(--muted)}
+.route .bar{height:4px;background:var(--rule);border-radius:3px;margin-top:6px;overflow:hidden}
+.route .bar i{display:block;height:100%;width:0;background:var(--veg);transition:width .3s}
+.route li.active button{background:var(--sheet);box-shadow:0 0 0 1px var(--rule)}
+.route li.active .pin{background:var(--road);border-color:var(--road);color:#fff}
+.route li.done:not(.active) .pin{background:var(--veg);border-color:var(--veg);color:#fff}
+
+.step{display:none}.step.active{display:block}
+.step-head{padding:6px 0 18px;border-bottom:2px solid var(--ink);margin-bottom:22px}
+.step-num{font-size:14px;color:var(--road);font-weight:700}
+.step-head h2{font-size:clamp(23px,3.1vw,31px);line-height:1.3;margin:2px 0 8px;letter-spacing:-.02em}
+.step-head p{margin:0;color:var(--muted);max-width:70ch}
+.goal{margin-top:12px;font-size:14px;background:var(--sheet);border:1px solid var(--rule);border-radius:8px;padding:10px 14px;max-width:70ch}
+.goal b{color:var(--veg)}
+
+.panel{background:var(--sheet);border:1px solid var(--rule);border-radius:12px;padding:22px 24px;margin-bottom:20px}
+.panel h3{font-size:18px;margin:0 0 4px}
+.panel .sub{color:var(--muted);margin:0 0 16px;font-size:14.5px}
+.note{font-size:13.5px;border-left:4px solid var(--road);background:var(--road-soft);padding:10px 14px;border-radius:0 8px 8px 0;margin:0 0 16px}
+
+.portal{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 24px;align-items:center;background:var(--water-soft);border:1px solid #c3d8e8;border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.portal h3{margin:0 0 6px;font-size:17px}
+.portal ol{margin:0;padding-left:20px;font-size:14.5px;color:#2d3f4d}
+.portal .go{background:var(--water);color:#fff;padding:14px 20px;border-radius:10px;font-weight:700;font-size:15.5px;text-decoration:none;display:flex;flex-direction:column;gap:2px;min-width:210px}
+.portal .go small{font-weight:400;font-size:12.5px;opacity:.85}
+.portal .go:hover{background:#235b81}
+.chips{display:flex;flex-wrap:wrap;gap:8px;grid-column:1/-1}
+.chips a{font-size:13.5px;padding:5px 12px;border:1px solid #a9c4d8;border-radius:20px;background:#fff;text-decoration:none}
+.chips a:hover{border-color:var(--water)}
+
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 18px}
+.span2{grid-column:span 2}
+.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fld>span{font-size:14px;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.fld>span em{font-style:normal;font-weight:400;color:var(--muted);font-size:12.5px}
+input[type=text],input[type=url],select,textarea{width:100%;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;background:#fbfcfb;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--water);background:#fff;outline:none;box-shadow:0 0 0 3px var(--water-soft)}
+textarea{resize:vertical;min-height:72px;line-height:1.6}
+.hint{font-size:13.5px;color:var(--muted);margin:0 0 12px}
+
+/* 탭 */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tabs button{border:1px solid var(--rule);background:var(--sheet);border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px}
+.tabs .dot{width:9px;height:9px;border-radius:50%;background:var(--rule)}
+.tabs button.filled .dot{background:var(--veg)}
+.tabs button[aria-selected=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tabpanel{display:none}.tabpanel.active{display:block}
+
+/* 근거 자료 */
+.evidence{border:1px solid var(--rule);border-left:5px solid var(--contour);border-radius:10px;padding:16px 18px;margin:14px 0;background:#fffefb}
+.ev-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ev-head h4{margin:0;font-size:16px}
+.ev-tag{font-size:12px;font-weight:700;color:var(--contour);background:var(--contour-soft);padding:2px 8px;border-radius:4px}
+.ev-guide{font-size:13.5px;color:var(--muted);margin:4px 0 12px}
+.drop{display:flex;align-items:center;gap:12px;border:2px dashed #cdbb98;border-radius:10px;padding:14px 16px;cursor:pointer;background:#fff}
+.drop:hover,.drop.over{border-color:var(--contour);background:var(--contour-soft)}
+.drop .ico{width:34px;height:34px;border-radius:50%;background:var(--contour-soft);display:grid;place-items:center;color:var(--contour);font-weight:700;flex:none;font-size:20px}
+.drop small{display:block;color:var(--muted);font-size:12.5px}
+.thumbs{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 4px}
+.thumbs:empty{display:none}
+.thumb{position:relative;width:118px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:#fff}
+.thumb img{display:block;width:100%;height:84px;object-fit:cover;cursor:zoom-in}
+.thumb .pdf{height:84px;display:grid;place-items:center;background:#f1e3e0;color:var(--road);font-weight:700}
+.thumb .nm{font-size:11.5px;padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.thumb .rm{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(27,43,58,.82);color:#fff;cursor:pointer;font-size:14px;line-height:1}
+.ev-fields{margin-top:10px}
+
+/* 반복 항목 카드 */
+.item{border:1px solid var(--rule);border-radius:12px;background:var(--sheet);padding:18px 20px;margin-bottom:16px}
+.item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.item-head h4{margin:0;font-size:16.5px}
+.rm-item{border:0;background:none;color:var(--muted);cursor:pointer;font-size:13.5px;text-decoration:underline}
+.rm-item:hover{color:var(--road)}
+
+/* 표 */
+.tbl-wrap{overflow-x:auto}
+table.grid{width:100%;border-collapse:collapse}
+table.grid th,table.grid td{border:1px solid var(--rule);padding:7px;vertical-align:top;text-align:left;font-size:14px}
+table.grid thead th{background:var(--veg-soft)}
+table.grid tbody th{background:#f7f9f6;white-space:nowrap}
+table.grid tbody th small{display:block;font-weight:400;color:var(--muted);font-size:12px;white-space:normal}
+table.grid textarea{min-height:60px;font-size:14px;border-color:transparent;background:transparent;padding:4px}
+table.grid textarea:focus{border-color:var(--water);background:#fff}
+table.grid td.c{text-align:center;vertical-align:middle}
+table.grid input[type=text],table.grid select{padding:6px 8px;font-size:14px}
+table.grid input[type=checkbox]{width:18px;height:18px;accent-color:var(--veg)}
+.rate{font-weight:700;white-space:nowrap}.rate.up{color:var(--road)}.rate.down{color:var(--water)}
+
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px}
+.checks label{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px;background:#fbfcfb}
+.checks input{accent-color:var(--veg);width:16px;height:16px;flex:none}
+.checks label:has(input:checked){border-color:var(--veg);background:var(--veg-soft)}
+
+/* 설문 막대 */
+.qbars{margin:4px 0 12px}
+.qbar{display:grid;grid-template-columns:minmax(80px,180px) minmax(0,1fr) 92px;gap:10px;align-items:center;font-size:13.5px;margin:4px 0}
+.qbar .track{height:14px;background:#edf1ee;border-radius:3px;overflow:hidden}
+.qbar .track i{display:block;height:100%;background:var(--water)}
+.qbar .pct{color:var(--muted);text-align:right}
+
+/* 영역별 관련 통계 */
+.related{list-style:none;padding:0;margin:0 0 14px}
+.related li{font-size:14px;padding:6px 10px;border-left:3px solid var(--water);background:var(--water-soft);margin-bottom:6px;border-radius:0 6px 6px 0}
+.related .empty{border-color:var(--rule);background:#f6f8f6;color:var(--muted)}
+
+/* 비교 슬라이더 */
+.cmp-empty{border:1px dashed var(--rule);border-radius:10px;padding:34px 16px;text-align:center;color:var(--muted);background:#fafbfa;font-size:14.5px}
+.cmp-wrap{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--rule);background:#dde3dd;--p:50%;user-select:none}
+.cmp-wrap img{display:block;width:100%;height:auto}
+.cmp-wrap img.top{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;clip-path:inset(0 calc(100% - var(--p)) 0 0)}
+.cmp-line{position:absolute;top:0;bottom:0;left:var(--p);width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.cmp-lab{position:absolute;top:10px;font-size:13px;font-weight:700;color:#fff;background:rgba(27,43,58,.78);padding:3px 10px;border-radius:4px}
+.cmp-lab.l{left:10px}.cmp-lab.r{right:10px}
+.cmp-range{width:100%;margin-top:10px;accent-color:var(--road)}
+
+/* AI 프롬프트 */
+.prompt-out{font-size:14px;min-height:220px;background:#f7f9fb;font-family:var(--font)}
+.score{font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;background:#edf1ee;color:var(--muted);white-space:nowrap}
+.score.ok{background:var(--veg-soft);color:var(--veg)}
+details.extra{border:1px solid var(--rule);border-radius:12px;background:var(--sheet);margin-bottom:20px}
+details.extra summary{padding:16px 24px;cursor:pointer;font-weight:700;font-size:16px}
+details.extra .inner{padding:0 24px 22px}
+.chart-box{background:#fff;border:1px solid var(--rule);border-radius:10px;padding:10px}
+#chart{width:100%;height:360px;display:block}
+.series{display:grid;grid-template-columns:180px minmax(0,1fr);gap:10px;align-items:center;margin-bottom:8px}
+.series .sw{display:flex;align-items:center;gap:8px}
+.series .sw i{width:14px;height:14px;border-radius:3px;flex:none}
+
+.hero{padding:10px 0 26px;border-bottom:2px solid var(--ink);margin-bottom:22px}
+.hero-title{font-size:clamp(30px,4.8vw,50px);line-height:1.18;letter-spacing:-.035em;margin:0 0 14px;font-weight:700}
+.hero-lead{max-width:58ch;color:var(--muted);margin:0;font-size:16.5px}
+.flow{list-style:none;counter-reset:f;margin:0;padding:0}
+.flow li{counter-increment:f;display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:12px;padding:12px 0;border-top:1px solid var(--rule)}
+.flow li:first-child{border-top:0;padding-top:4px}
+.flow li::before{content:counter(f);grid-row:span 2;width:30px;height:30px;border-radius:50%;border:3px solid var(--contour);display:grid;place-items:center;font-weight:700;color:var(--contour);font-size:14px}
+.flow b{font-size:15.5px}.flow span{color:var(--muted);font-size:14.5px}
+.part{display:flex;align-items:center;gap:10px;font-size:21px;margin:36px 0 14px;letter-spacing:-.01em}
+.part.first{margin-top:0}
+.part span{font-size:13px;font-weight:700;color:#fff;background:var(--contour);padding:3px 10px;border-radius:4px}
+.pattern{border-color:var(--veg);background:linear-gradient(var(--veg-soft),var(--veg-soft)) top/100% 4px no-repeat,var(--sheet)}
+.pattern h3::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--veg);margin-right:8px;vertical-align:1px}
+.empty-note{text-align:center;color:var(--muted);font-size:14px;border:1px dashed var(--rule);border-radius:10px;padding:18px;margin:0 0 12px;background:#fafbfa}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.pair-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pair-top{display:flex;align-items:center;gap:10px}
+.pair-top b{font-size:14px;padding:4px 12px;border-radius:4px;color:#fff;white-space:nowrap}
+.pair-col.past .pair-top b{background:var(--contour)}
+.pair-col.now .pair-top b{background:var(--water)}
+.pair-top input{max-width:150px}
+.photo-slot .drop{min-height:230px;flex-direction:column;justify-content:center;text-align:center}
+.photo{margin:0;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:#dde3dd}
+.photo img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;cursor:zoom-in}
+.photo-actions{display:flex;gap:8px;padding:8px;background:#fff;border-top:1px solid var(--rule)}
+.pair-col .fld{margin:0}
+.obs-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.obs-chips button{border:1px solid var(--rule);background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;text-align:left;font-size:14px;font-weight:600}
+.obs-chips button small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.obs-chips button:hover{border-color:var(--veg);background:var(--veg-soft)}
+.guide-q{margin:0 0 14px;padding-left:20px;font-size:14px;color:#3d4a44}
+.guide-q li{margin:2px 0}
+.viz-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.vcard{border:1px solid var(--rule);border-radius:10px;padding:14px 16px;background:#fff;min-width:0}
+.vcard.wide{grid-column:1/-1}
+.vhead{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.vhead h4{margin:0;font-size:15.5px}
+.vtype{font-size:12px;font-weight:700;color:var(--veg);background:var(--veg-soft);padding:2px 8px;border-radius:4px;white-space:nowrap}
+.vwhy{font-size:13px;color:var(--muted);margin:4px 0 10px}
+.vphotos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vphotos figure{margin:0}
+.vphotos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;cursor:zoom-in;display:block}
+.vphotos figcaption{font-size:13px;text-align:center;color:var(--muted);margin-top:4px}
+.vnone{aspect-ratio:4/3;display:grid;place-items:center;background:#f1f3f1;color:var(--muted);border-radius:6px;font-size:13px}
+.vnote{margin:12px 0 0}
+table.mirror td,table.mirror th{font-size:14px}
+table.mirror small{color:var(--muted)}
+[hidden]{display:none!important}
+.topbar .btn-outline{background:transparent;color:#fff;border:1px solid #4a6275}
+.topbar .btn-outline:hover{background:#24384a}
+.submit-box{background:var(--sheet);border:2px solid var(--water);border-radius:12px;padding:22px 24px;margin-bottom:20px}
+.submit-box h3{margin:0 0 4px;font-size:18px}
+.submit-box p{margin:0 0 14px;color:var(--muted);font-size:14.5px}
+.submit-ok{margin-top:12px!important;color:var(--veg)!important;font-weight:600}
+/* 교사용: 제출 PDF 모아 보기 */
+.teacher{max-width:1400px;margin:0 auto;padding:28px 20px 60px}
+.t-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:20px;flex-wrap:wrap}
+.t-kicker{color:var(--road);font-weight:700;font-size:14px;margin:0}
+.t-head h2{font-size:clamp(24px,3vw,32px);margin:2px 0 6px;letter-spacing:-.02em}
+.t-head .sub{margin:0;color:var(--muted);max-width:72ch;font-size:14.5px}
+.t-drop{margin-bottom:16px;padding:22px}
+.t-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.t-stat{background:#fff;border:1px solid var(--rule);border-radius:10px;padding:12px 16px}
+.t-stat b{display:block;font-size:24px;line-height:1.2}
+.t-stat span{font-size:13px;color:var(--muted)}
+.t-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.t-tools .sel{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.t-tools select{width:auto}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:none;padding:7px 14px;font-weight:600;font-size:14px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.spacer{flex:1}
+.t-split{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}
+.t-side{background:#fff;border:1px solid var(--rule);border-radius:12px;padding:10px;max-height:calc(100vh - 140px);overflow:auto;position:sticky;top:76px}
+.t-side h4{margin:10px 6px 6px;font-size:13px;color:var(--muted)}
+.t-side h4:first-child{margin-top:4px}
+.t-side button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14.5px;font-weight:600}
+.t-side button small{display:block;font-weight:400;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-side button:hover{background:var(--map)}
+.t-side button.on{background:var(--water-soft);box-shadow:inset 3px 0 0 var(--water)}
+.t-nav{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.t-nav .pos{font-weight:700;font-size:14px}
+.t-panes{display:grid;gap:14px}
+.t-panes.two{grid-template-columns:1fr 1fr}
+.t-pane{background:#fff;border:1px solid var(--rule);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.t-pane-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--rule);font-size:14.5px}
+.t-pane-head a{font-size:13px}
+.t-pane iframe{border:0;width:100%;height:calc(100vh - 230px);min-height:520px;background:#525659}
+.pdf-status{margin-top:12px!important;font-weight:600}
+@media (max-width:900px){.t-split{grid-template-columns:1fr}.t-side{position:static;max-height:260px}.t-panes.two{grid-template-columns:1fr}.t-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.refbox{border:1px dashed var(--rule);border-radius:10px;padding:14px 16px;margin:4px 0 14px;background:#fafbfa}
+.ref-show{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.rfig.wide{grid-column:1/-1}
+.ref-show:not(:empty){margin-top:12px}
+.rfig{margin:0;border:1px solid var(--rule);border-radius:8px;padding:8px;background:#fff;min-width:0}
+.rfig img{width:100%;border-radius:4px;display:block}
+.rfig svg{max-width:100%!important}
+.rfig figcaption{font-size:12.5px;color:var(--muted);text-align:center;margin-top:4px}
+.chip-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.chip-links a{font-size:13.5px;padding:5px 12px;border:1px solid #a9c4d8;border-radius:20px;background:#fff;text-decoration:none}
+.step-nav{display:flex;justify-content:space-between;gap:12px;margin-top:8px}
+.save-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.save-card{border:1px solid var(--rule);border-radius:10px;padding:16px 18px;background:#fff;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.save-card h4{margin:0;font-size:16px}
+.save-card p{margin:0;font-size:14px;color:var(--muted);flex:1}
+.check-list{list-style:none;padding:0;margin:0}
+.check-list li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14.5px}
+.check-list li span:last-child{font-weight:700}
+.preview-wrap{border:1px solid var(--rule);border-radius:12px;background:#fff;padding:28px;overflow-x:auto}
+
+.lightbox{position:fixed;inset:0;background:rgba(15,25,35,.88);display:none;place-items:center;z-index:50;padding:24px;cursor:zoom-out}
+.lightbox.open{display:grid}.lightbox img{max-height:90vh;border-radius:6px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr);padding-top:12px;gap:12px}
+  .route{position:static}.route-title{display:none}
+  .route ol{display:flex;overflow-x:auto;gap:6px;padding-bottom:6px}
+  .route ol::before{display:none}.route li{flex:none}
+  .route button{padding:8px 10px;background:rgba(255,255,255,.5)}
+  .route .lbl small{display:none}.route .bar{width:80px}
+  .grid2,.grid3,.save-grid,.portal,.series,.viz-grid{grid-template-columns:1fr}
+  .pair{gap:10px}
+  .photo-slot .drop{min-height:160px}
+  .span2{grid-column:auto}
+  .panel,.item{padding:18px 16px}
+  .topbar .status{display:none}
+  .qbar{grid-template-columns:90px minmax(0,1fr) 80px}
+}
+
+/* ================= 지리 수업 테마: 지형도·답사 노트 ================= */
+:root{--map:#efece1;--paper:#fbfaf5;--paper-line:#d9d2bf;--grid:rgba(44,110,155,.075);--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+body{background-color:var(--map);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:48px 48px}
+.topbar{background:#16263a}
+.topbar::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:5px;background:repeating-linear-gradient(90deg,#16263a 0 32px,#fbfaf5 32px 64px);border-bottom:1px solid #16263a}
+.topbar h1{display:flex;align-items:center;gap:10px}
+.topbar .tb-compass{width:26px;height:26px;flex:none}
+.topbar .region{font-family:var(--mono);font-size:12px;letter-spacing:.02em}
+.layout{padding-top:34px}
+/* 지도 도엽처럼 꾸민 첫 화면 */
+.map-sheet{position:relative;background:var(--paper);border:2px solid var(--ink);outline:1px solid var(--ink);outline-offset:5px;margin:8px 6px 30px;padding:0}
+.sheet-meta,.sheet-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 16px;font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.03em;flex-wrap:wrap}
+.sheet-meta{border-bottom:1px solid var(--paper-line)}
+.sheet-foot{border-top:1px solid var(--paper-line)}
+.sheet-meta::before,.sheet-foot::before{content:none}
+.map-sheet::before{content:"";position:absolute;left:0;right:0;top:-1px;height:7px;background:repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 48px);pointer-events:none}
+.sheet-body{position:relative;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);align-items:center;min-height:300px;overflow:hidden}
+.sheet-text{position:relative;z-index:1;padding:30px 30px 30px 34px}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--road);letter-spacing:.06em;margin:0 0 12px}
+.hero-kicker::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--road);box-shadow:0 0 0 3px var(--road-soft)}
+.map-sheet .hero-title{font-size:clamp(26px,3.2vw,38px);word-break:keep-all;line-height:1.22;margin:0 0 14px}
+.hero-title .place{display:block;font-size:.58em;color:var(--muted);letter-spacing:-.01em;margin-bottom:4px;font-weight:600}
+.hero-title .dong{color:var(--water);border-bottom:4px solid var(--contour-soft)}
+.map-sheet .hero-lead{font-size:15.5px}
+.contours{width:100%;height:100%;min-height:300px;display:block}
+.contours .c{fill:none;stroke:#c9a46a;stroke-width:1.1;opacity:.75}
+.contours .ci{fill:none;stroke:#a87a35;stroke-width:2}
+.contours .river{fill:none;stroke:#5b9ac4;stroke-width:5;stroke-linecap:round;opacity:.85}
+.contours .road{fill:none;stroke:var(--road);stroke-width:2.2;stroke-dasharray:9 6}
+.contours .pin-label{font-family:var(--font);font-size:15px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--paper);stroke-width:5px}
+.scalebar{display:flex;align-items:flex-end;gap:0}
+.scalebar i{display:block;width:34px;height:7px;border:1px solid var(--ink)}
+.scalebar i:nth-child(odd){background:var(--ink)}
+.scalebar span{margin-left:8px}
+.north{width:22px;height:30px}
+/* 단계 머리: 도엽 표제처럼 */
+.step-head{border-bottom:3px double var(--ink)}
+.step-num{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;background:var(--ink);color:#fff;padding:3px 10px 3px 8px;border-radius:3px}
+.step-num::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffb59e}
+.panel,.item{background:var(--paper);border-color:var(--paper-line)}
+.panel>h3:first-child,.item-head h4{display:flex;align-items:center;gap:8px}
+.panel>h3:first-child::before{content:"";width:12px;height:12px;flex:none;border:2px solid var(--contour);background:repeating-linear-gradient(45deg,var(--contour-soft) 0 2px,transparent 2px 4px)}
+.pattern>h3::before{border:0!important;background:var(--veg)!important;border-radius:50%!important;width:10px!important;height:10px!important}
+.goal{background:var(--paper);border:1px solid var(--ink);border-radius:0;position:relative;padding-top:16px}
+.goal b{position:absolute;top:-10px;left:10px;background:var(--paper);padding:0 6px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--veg)}
+.route-title{font-family:var(--mono);letter-spacing:.08em}
+.part span{font-family:var(--mono);letter-spacing:.04em;border-radius:2px}
+.portal{background:linear-gradient(var(--water-soft),var(--water-soft)) padding-box;border:1px solid #b8d0e2}
+.save-card,.vcard,.t-card{background:var(--paper)}
+@media (max-width:900px){main{min-width:0}.sheet-body{grid-template-columns:minmax(0,1fr)}.sheet-text{padding:24px 20px}.map-sheet{margin:6px 4px 24px}}
+/* 서울 지도 */
+.seoul-map{width:100%;height:auto;display:block;padding:6px 10px 0 0}
+.seoul-map .gu{fill:#ebe5d1;stroke:#b5a986;stroke-width:.8}
+.seoul-map .gu.sdm{fill:#cfe0ec;stroke:var(--water);stroke-width:1.6}
+.seoul-map .gu-label{font-size:11px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:#fbfaf5;stroke-width:3px}
+.seoul-map .zoom-box{fill:none;stroke:var(--road);stroke-width:1.2;stroke-dasharray:3 2}
+.seoul-map .leader{fill:none;stroke:var(--road);stroke-width:.9;stroke-dasharray:3 3}
+.seoul-map .inset-frame{fill:#fff;stroke:var(--ink);stroke-width:1.2}
+.seoul-map .dong-shape{fill:#e3edf4;stroke:#7fa6c2;stroke-width:.9;transition:fill .25s}
+.seoul-map .dong-shape:hover{fill:#cfe0ec}
+.seoul-map .dong-shape.on{fill:var(--road);stroke:#7a2414;stroke-width:1.4}
+.seoul-map .dong-pin circle{fill:#fff;stroke:var(--ink);stroke-width:2}
+.seoul-map .dong-pin text{font-size:13px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px}
+.seoul-map .map-cap{font-family:var(--mono);font-size:11px;fill:var(--muted);letter-spacing:.04em}
+.seoul-map .map-src{font-size:8.5px;fill:#8b938c}
+.seoul-map .n-mark{font-size:8px;font-weight:700;fill:var(--ink);font-family:var(--mono)}
+.legend{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:12px;border:1px solid var(--ink)}
+.legend .lg-gu{background:#cfe0ec}.legend .lg-dong{background:var(--road);margin-left:8px}
+@media (max-width:900px){.seoul-map{padding:0 10px 10px}}
+/* 교사용 한눈에 보기 */
+.seg button{white-space:nowrap}
+.g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;align-items:start}
+.g-card{background:var(--paper);border:1px solid var(--paper-line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.g-card>header{background:var(--ink);color:#fff;padding:12px 16px}
+.g-card>header h4{margin:0;font-size:17px;display:flex;align-items:center;gap:8px}
+.g-card>header h4::before{content:"";width:9px;height:9px;border-radius:50%;background:#ffb59e}
+.g-card>header p{margin:2px 0 0;font-size:13px;color:#c9d6e0}
+.g-body{padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
+.g-photos{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.g-photos figure{margin:0}
+.g-photos img,.g-photos .vnone{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;display:block;cursor:zoom-in}
+.g-photos figcaption{font-size:11.5px;color:var(--muted);text-align:center}
+.g-sec h5{margin:0 0 2px;font-size:12.5px;color:var(--veg);font-family:var(--mono);letter-spacing:.03em}
+.g-sec p{margin:0;font-size:13.5px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.g-sec svg{max-width:100%!important;height:auto}
+.g-tags{display:flex;flex-wrap:wrap;gap:6px}
+.g-tags span{font-size:12.5px;border:1px solid var(--road);color:var(--road);border-radius:12px;padding:1px 9px;background:#fff}
+.g-acts{display:flex;gap:8px;padding:0 16px 14px;margin-top:auto}
+.g-none{font-size:13px;color:var(--muted);background:#f4f2ea;border-radius:6px;padding:8px 10px}
+.i-tools{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.i-tools select{width:auto;min-width:240px}
+.i-card .g-sec p{-webkit-line-clamp:unset;display:block}
+.i-card table{width:100%;border-collapse:collapse;font-size:13px}
+.i-card th,.i-card td{border:1px solid var(--paper-line);padding:5px 7px;text-align:left;vertical-align:top}
+.i-card th{background:var(--veg-soft)}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(15,25,35,.6);display:flex;justify-content:center;padding:24px}
+.modal-box{background:#fff;border-radius:12px;width:min(960px,100%);display:flex;flex-direction:column;overflow:hidden}
+.modal-bar{display:flex;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.modal-bar b{flex:1;min-width:160px}
+.modal-body{overflow:auto;padding:28px;flex:1}
+@media (max-width:900px){.modal{padding:0}.modal-body{padding:18px}.g-grid{grid-template-columns:1fr}}
+/* 분야별 기록 카드 */
+.field-card{background:var(--paper);border:1px solid var(--paper-line);border-left:5px solid var(--water);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+.fc-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.fc-head .fc-no{font-family:var(--mono);font-size:12px;font-weight:600;background:var(--ink);color:#fff;padding:2px 8px;border-radius:3px}
+.fc-head h3{margin:0;font-size:18px}
+.fc-head small{color:var(--muted);font-size:13px}
+.fc-row{display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr)) 86px;gap:10px;align-items:end}
+.fc-row .fld{margin:0}
+.fc-rate{font-size:13px;color:var(--muted);text-align:center;padding-bottom:8px}
+.fc-rate .rate{display:block;font-size:16px}
+.fc-mid{margin:10px 0 12px}
+.fc-mid input{max-width:420px}
+@media (max-width:900px){.fc-row{grid-template-columns:1fr 1fr}.fc-row .fld:first-child{grid-column:1/-1}}
+details.num-box{border:1px dashed var(--paper-line);border-radius:10px;background:#fff;margin:4px 0 12px}
+details.num-box>summary{padding:10px 14px;cursor:pointer;font-weight:600;font-size:14px;color:var(--water)}
+details.num-box>summary small{font-weight:400;color:var(--muted)}
+details.num-box .inner{padding:0 14px 12px}
+.fc-guide{margin:-4px 0 12px;font-size:14px;color:#3d4a44}
+table.chg{width:100%;border-collapse:collapse;font-size:14px}
+table.chg th,table.chg td{border:1px solid var(--paper-line);padding:8px 10px;text-align:left;vertical-align:top}
+table.chg thead th{background:var(--veg-soft)}
+table.chg tbody th{background:#f7f5ee;width:150px}
+table.chg td{width:28%}
+.notice{display:flex;flex-direction:column;gap:4px;background:#fff6e0;border:2px solid var(--contour);border-radius:10px;padding:14px 18px 14px 52px;margin:0 0 18px;position:relative;font-size:14.5px}
+.notice::before{content:"!";position:absolute;left:16px;top:14px;width:24px;height:24px;border-radius:50%;background:var(--contour);color:#fff;font-weight:700;display:grid;place-items:center;font-size:15px}
+.notice b{font-size:16px;color:#7a5418}
+.cause-flow{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);gap:8px;align-items:center}
+.cf-arrow{font-size:26px;font-weight:700;color:var(--road);text-align:center;padding-top:18px}
+@media (max-width:900px){.cause-flow{grid-template-columns:1fr}.cf-arrow{transform:rotate(90deg);padding:0}}
+.team-guide{background:var(--paper);border:2px solid var(--veg);border-radius:10px;padding:14px 18px;margin:0 0 14px}
+.team-guide h3{margin:0 0 6px;font-size:16px;color:var(--veg)}
+.team-guide ol{margin:0;padding-left:20px;font-size:14.5px}
+.team-guide li{margin:4px 0}
+.team-guide li b{margin-right:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  body{background:#fff}
+  .report h2.pb{break-before:page}
+  .topbar,.route,.no-print,.step:not(.active){display:none!important}
+  .layout{display:block;padding:0}
+  .preview-wrap{border:0;padding:0}
+}
+</style>
+<style id="reportCss">
+.report{font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#1b2b3a;line-height:1.7;font-size:14.5px;max-width:880px;margin:0 auto}
+.report h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}
+.report .meta{color:#5d6b75;margin:0 0 24px;padding-bottom:14px;border-bottom:2px solid #1b2b3a}
+.report h2{font-size:19px;margin:32px 0 10px;padding-left:10px;border-left:5px solid #a87a35}
+.report h3{font-size:16px;margin:18px 0 6px}
+.report p{margin:4px 0 10px}
+.report .k{font-weight:700}
+.report .empty{color:#9aa5ad}
+.report table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:13.5px}
+.report th,.report td{border:1px solid #cfd8d0;padding:6px 8px;text-align:left;vertical-align:top}
+.report th{background:#eef2ec}
+.report .imgs{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+.report .imgs figure{margin:0;flex:1 1 240px;max-width:100%}
+.report .imgs img{width:100%;border:1px solid #cfd8d0;border-radius:4px}
+.report .imgs figcaption{font-size:12px;color:#5d6b75}
+.report .ev{border-left:3px solid #a87a35;background:#fbf8f1;padding:10px 14px;margin:10px 0;border-radius:0 6px 6px 0;break-inside:avoid}
+.report .ev .src{font-size:12.5px;color:#5d6b75}
+.report .box{border:1px solid #cfd8d0;border-radius:8px;padding:12px 16px;margin:12px 0;break-inside:avoid}
+.report .tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.report .tags span{border:1px solid #4f7f4e;color:#4f7f4e;border-radius:12px;padding:1px 10px;font-size:12.5px}
+.report .tags span.no{border-color:#c9d1cb;color:#9aa5ad;text-decoration:line-through}
+.report .vcard{border:1px solid #cfd8d0;border-radius:6px;padding:10px 14px;margin:10px 0;break-inside:avoid}
+.report .vhead{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.report .vhead h4{margin:0;font-size:15px}
+.report .vtype{font-size:12px;color:#4f7f4e;font-weight:700}
+.report .vwhy{font-size:12.5px;color:#5d6b75;margin:2px 0 8px}
+.report .vphotos{display:flex;gap:10px}.report .vphotos figure{margin:0;flex:1}
+.report .vphotos img{width:100%;border-radius:4px}.report .vphotos figcaption{font-size:12px;text-align:center;color:#5d6b75}
+.report .vnone{padding:30px 0;text-align:center;color:#9aa5ad;background:#f4f6f4}
+.report .vread{font-size:13.5px;background:#eef2ec;padding:6px 10px;border-radius:4px;margin:8px 0 0}
+.report .refs{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+.report .rfig{margin:0;flex:1 1 300px;border:1px solid #cfd8d0;border-radius:6px;padding:6px;break-inside:avoid}
+.report .rfig.wide{flex-basis:100%}.report .rfig.wide svg{display:block;margin:0 auto}
+.report .rfig img{width:100%;display:block}.report .rfig svg{max-width:100%}
+.report .rfig figcaption{font-size:12px;color:#5d6b75;text-align:center}
+.report .bar{display:grid;grid-template-columns:150px 1fr 80px;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.report .bar .t{height:12px;background:#edf1ee}.report .bar .t i{display:block;height:100%;background:#2c6e9b}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1><svg class="tb-compass" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11.5" fill="none" stroke="#fbfaf5" stroke-width="1.4"/><path d="M13 3l3 10h-6z" fill="#ffb59e"/><path d="M13 23l-3-10h6z" fill="#fbfaf5"/></svg><span id="topTitle">서울특별시 서대문구는 어떻게 달라졌을까?</span></h1>
+  <span class="region" id="regionChip">조사할 동 미정</span>
+  <span class="spacer"></span>
+  <span class="status" id="status">아직 저장하지 않았어요</span>
+  <button class="btn btn-outline btn-sm" type="button" id="openTeacher">교사용: 제출물 모아 보기</button>
+  <label class="btn btn-outline btn-sm" style="cursor:pointer">작업 파일 불러오기<input type="file" accept=".json,application/json" id="loadJson" hidden></label>
+  <button class="btn btn-light btn-sm" type="button" id="quickSave">작업 파일 저장</button>
+</header>
+
+<div class="layout">
+  <nav class="route" aria-label="단계 메뉴">
+    <p class="route-title">조사 경로</p>
+    <ol id="routeList"></ol>
+  </nav>
+
+  <main>
+
+  <!-- ===================== 0. 시작하기 ===================== -->
+  <section class="step" id="step0" data-title="시작하기" data-desc="활동 안내와 조사자 정보" data-pin="S">
+    <div class="hero map-sheet">
+      <div class="sheet-meta"><span>통합사회</span><span>지역 조사 활동지 · 생활 공간의 변화</span></div>
+      <div class="sheet-body">
+        <div class="sheet-text">
+          <p class="hero-kicker">우리 동네 지역 조사</p>
+          <h2 class="hero-title" id="heroTitle"><span class="place">서울특별시</span>서대문구는<br>어떻게 달라졌을까?</h2>
+          <p class="hero-lead">서대문구 안에서 조사할 동을 하나 정하고, 그 동의 과거와 현재를 비교해 공간 변화가 초래한 양상을 근거를 들어 탐구해 봅니다.</p>
+        </div>
+        <svg class="seoul-map" viewBox="0 12 600 330" aria-label="서울특별시 지도와 서대문구 확대도" role="img">
+  <g class="gu-layer"><path class="gu" d="M288.6 209.6L291.4 209.9L293.6 207.3L295.8 205.7L305.0 201.5L315.5 198.3L320.1 196.3L329.3 190.5L332.1 190.8L336.6 190.5L339.0 189.3L337.7 192.7L338.3 195.7L339.7 197.9L340.7 200.8L341.1 204.3L342.9 209.0L342.5 217.1L343.9 218.2L343.5 221.8L344.0 224.5L342.6 224.7L340.6 223.2L337.9 224.7L335.3 224.3L330.5 225.6L328.1 224.8L320.5 235.8L320.3 240.5L317.3 244.1L315.9 247.7L314.4 247.8L313.6 250.3L313.5 252.8L312.4 252.3L293.4 241.7L294.4 239.5L296.6 231.3L292.9 228.9L285.8 226.4L287.8 222.3L289.2 216.6L289.2 211.3L288.6 209.6Z"><title>강동구</title></path><path class="gu" d="M252.2 244.7L256.9 246.0L260.6 246.2L265.9 245.3L272.2 243.0L277.3 242.1L280.4 235.8L285.8 226.4L292.9 228.9L296.6 231.3L294.4 239.5L293.4 241.7L312.4 252.3L313.5 252.8L313.5 254.1L311.8 255.4L310.7 257.4L309.8 261.1L310.7 264.2L314.0 266.2L315.9 266.4L317.8 265.2L319.2 266.5L324.6 268.0L326.7 269.4L325.5 272.8L325.6 275.2L324.3 279.0L323.1 280.7L319.2 281.9L317.2 289.3L317.2 291.1L314.9 292.9L311.4 293.0L309.1 296.1L305.3 294.6L302.5 294.1L302.7 297.8L306.2 300.2L304.1 301.6L300.9 301.6L298.1 300.0L298.2 302.5L295.9 304.3L295.9 302.2L294.5 299.1L287.5 287.1L288.0 286.0L285.4 281.1L282.8 278.2L280.0 276.1L275.7 273.8L261.2 269.0L258.1 268.2L254.5 264.6L252.4 249.8L251.9 248.8L252.2 244.7Z"><title>송파구</title></path><path class="gu" d="M244.0 240.7L252.2 244.7L251.9 248.8L252.4 249.8L254.5 264.6L258.1 268.2L261.2 269.0L275.7 273.8L280.0 276.1L282.8 278.2L285.4 281.1L288.0 286.0L287.5 287.1L294.5 299.1L295.9 302.2L295.9 304.3L292.1 307.3L291.5 310.8L288.7 309.4L287.8 307.9L283.3 306.9L281.0 309.8L276.9 310.6L275.4 308.0L274.4 305.8L269.0 301.2L266.1 296.6L265.9 294.0L261.1 294.7L257.7 296.6L256.7 294.7L254.8 294.4L254.0 295.6L248.7 296.7L248.0 300.5L244.2 301.1L241.9 300.8L234.9 292.2L232.0 284.0L226.3 285.0L224.4 280.0L215.6 256.9L213.8 249.2L212.9 246.9L208.8 241.9L215.9 234.7L219.0 232.2L223.0 231.0L235.7 237.3L236.4 235.6L238.1 237.3L244.0 240.7Z"><title>강남구</title></path><path class="gu" d="M208.8 241.9L212.9 246.9L213.8 249.2L215.6 256.9L224.4 280.0L226.3 285.0L232.0 284.0L234.9 292.2L241.9 300.8L244.2 301.1L248.0 300.5L248.7 296.7L254.0 295.6L254.8 294.4L256.7 294.7L257.7 296.6L261.1 294.7L265.9 294.0L266.1 296.6L269.0 301.2L274.4 305.8L275.4 308.0L274.0 310.7L274.4 312.9L273.3 313.3L272.5 315.7L271.0 316.6L269.1 320.2L269.1 323.6L265.8 325.4L264.3 328.1L258.4 326.9L255.9 327.6L256.2 329.3L258.2 330.5L257.7 332.2L255.8 333.3L255.1 337.1L255.6 338.3L252.1 339.2L251.2 340.3L247.6 339.2L245.1 339.2L240.5 340.7L238.7 339.0L236.9 338.5L236.0 335.8L230.8 330.8L227.7 330.2L227.3 328.2L229.6 324.6L229.0 323.0L229.2 320.0L227.9 317.8L228.6 314.8L228.4 312.8L226.9 311.2L225.9 308.0L226.8 305.6L224.1 303.7L220.0 310.9L215.6 313.3L212.2 314.0L208.1 314.0L206.5 312.1L204.4 307.3L203.6 306.8L202.1 302.2L197.8 302.1L196.5 302.8L197.2 305.5L196.9 307.3L194.1 308.0L190.4 311.3L189.5 309.0L190.1 303.9L189.1 301.6L187.2 299.7L185.6 296.7L184.9 292.9L185.9 273.3L187.6 269.6L184.5 267.4L183.9 265.7L183.7 257.6L185.6 256.2L189.5 256.0L191.0 257.0L197.8 253.0L202.4 250.0L204.2 248.2L205.8 244.9L208.8 241.9Z"><title>서초구</title></path><path class="gu" d="M184.9 292.9L185.6 296.7L187.2 299.7L189.1 301.6L190.1 303.9L189.5 309.0L190.4 311.3L185.8 312.7L184.3 316.4L180.7 318.9L178.9 321.8L176.6 321.8L171.3 323.8L171.1 327.2L170.3 328.3L167.4 328.6L166.6 329.8L162.5 329.8L156.2 331.7L153.9 331.8L151.6 333.4L150.7 331.9L150.9 329.0L148.6 326.1L145.0 323.7L145.0 321.2L143.2 319.2L138.8 315.0L138.2 312.7L133.8 311.7L132.1 311.7L131.8 307.9L130.7 305.5L131.4 304.2L129.7 302.9L127.0 296.9L129.0 295.9L130.0 292.6L128.0 291.3L128.2 288.6L121.1 290.2L120.1 289.2L123.1 284.6L125.2 284.6L131.0 282.4L134.0 280.2L139.7 279.6L141.5 275.5L142.4 274.6L145.3 276.4L147.8 276.5L149.2 277.4L153.4 277.4L157.7 275.6L161.5 277.2L163.0 278.6L165.3 278.0L168.8 276.2L168.5 278.8L169.7 282.3L168.9 286.1L176.1 294.2L181.2 293.0L184.9 292.9Z"><title>관악구</title></path><path class="gu" d="M183.7 257.6L183.9 265.7L184.5 267.4L187.6 269.6L185.9 273.3L184.9 292.9L181.2 293.0L176.1 294.2L168.9 286.1L169.7 282.3L168.5 278.8L168.8 276.2L165.3 278.0L163.0 278.6L161.5 277.2L157.7 275.6L153.4 277.4L149.2 277.4L147.8 276.5L145.3 276.4L142.4 274.6L141.5 275.5L139.7 279.6L134.0 280.2L131.0 282.4L125.2 284.6L123.1 284.6L130.4 273.2L136.1 271.9L137.2 267.6L140.6 257.0L141.9 256.7L141.1 253.6L146.1 254.1L153.6 252.3L160.3 249.7L162.7 252.2L165.8 254.4L171.5 256.9L183.7 257.6Z"><title>동작구</title></path><path class="gu" d="M112.5 219.7L121.1 225.7L125.4 227.8L143.6 232.9L147.9 233.6L154.9 240.4L157.4 242.7L158.4 246.2L160.3 249.7L153.6 252.3L146.1 254.1L141.1 253.6L141.9 256.7L140.6 257.0L137.2 267.6L136.1 271.9L130.4 273.2L123.1 284.6L120.9 283.9L117.8 280.5L115.6 272.9L115.3 266.5L115.7 262.2L113.0 258.1L104.3 253.0L104.6 247.6L105.2 244.5L106.1 243.4L110.3 241.1L111.5 239.1L112.7 239.4L113.9 236.7L113.7 234.0L110.5 226.5L109.6 226.3L108.9 223.6L112.5 219.7Z"><title>영등포구</title></path><path class="gu" d="M120.1 289.2L121.1 290.2L128.2 288.6L128.0 291.3L130.0 292.6L129.0 295.9L127.0 296.9L129.7 302.9L131.4 304.2L130.7 305.5L131.8 307.9L132.1 311.7L133.8 311.7L138.2 312.7L138.8 315.0L143.2 319.2L139.1 322.8L137.2 325.2L136.2 328.1L134.7 329.4L131.8 329.3L129.5 331.8L127.4 335.5L122.7 335.2L122.7 333.4L120.1 331.2L119.5 330.0L119.7 326.2L119.1 324.7L117.1 323.7L117.4 321.1L115.9 316.8L114.7 317.5L112.2 316.7L111.9 314.2L109.7 313.0L109.6 310.0L111.6 307.0L104.7 296.7L102.1 292.0L99.6 284.9L100.6 284.2L103.7 283.0L105.3 283.6L109.5 287.0L111.9 289.9L116.4 291.0L119.7 290.6L120.1 289.2Z"><title>금천구</title></path><path class="gu" d="M61.2 261.4L64.6 261.5L67.0 264.5L70.4 267.2L73.7 265.7L73.3 264.1L77.0 264.0L77.3 261.7L80.1 260.9L81.2 259.6L83.4 259.1L85.5 260.4L87.5 259.7L89.1 263.0L90.9 263.0L91.5 264.4L93.6 264.1L96.1 264.8L98.6 264.3L99.6 261.2L103.5 255.4L104.3 253.0L113.0 258.1L115.7 262.2L115.3 266.5L115.6 272.9L117.8 280.5L120.9 283.9L123.1 284.6L120.1 289.2L119.7 290.6L116.4 291.0L111.9 289.9L109.5 287.0L105.3 283.6L103.7 283.0L100.6 284.2L102.5 281.6L101.6 280.5L99.2 281.2L99.2 279.6L95.1 275.8L92.8 278.3L90.0 279.8L87.2 283.7L85.1 284.4L84.1 286.7L82.6 287.9L78.8 287.5L77.9 288.6L77.6 295.2L72.8 293.8L69.6 294.2L66.7 292.0L64.8 293.3L61.0 293.1L59.1 293.8L57.2 291.5L57.4 287.8L56.9 285.4L57.4 283.8L60.2 281.8L59.6 279.6L55.7 278.0L53.0 276.3L51.7 273.5L52.0 271.6L54.0 272.1L56.4 270.9L57.4 268.3L58.7 267.6L59.8 263.8L59.5 261.9L61.2 261.4Z"><title>구로구</title></path><path class="gu" d="M87.2 195.4L87.0 198.9L87.7 200.4L93.9 204.1L103.1 212.0L112.5 219.7L108.9 223.6L109.6 226.3L108.8 226.3L105.3 222.0L100.0 222.9L97.4 222.2L92.4 218.5L90.7 225.3L91.9 228.9L91.7 233.2L92.2 240.0L80.2 241.9L73.6 243.2L68.9 233.4L69.3 232.1L67.8 228.0L65.7 228.1L65.2 225.6L63.8 224.5L62.8 228.0L59.1 229.2L53.2 229.2L49.8 228.2L49.0 226.7L44.3 227.0L41.5 229.4L40.7 232.0L37.6 234.0L36.7 230.4L37.6 228.4L35.2 228.0L35.2 226.0L32.7 225.4L31.2 223.5L25.8 223.6L22.3 221.0L18.9 221.2L16.2 216.6L14.0 214.3L17.0 214.2L17.5 212.8L23.3 208.0L23.4 205.8L21.7 202.6L24.1 202.9L26.2 201.8L28.0 199.7L27.4 198.1L28.2 196.3L33.5 192.5L36.4 192.7L36.3 189.6L36.8 187.1L38.4 186.9L40.7 181.9L42.3 181.1L41.1 178.9L41.2 177.2L39.8 174.4L39.3 171.6L40.4 169.1L41.6 168.8L42.1 166.1L43.1 165.5L46.0 166.5L54.3 175.8L57.8 179.3L62.8 181.7L81.8 194.4L87.2 195.4Z"><title>강서구</title></path><path class="gu" d="M59.1 229.2L62.8 228.0L63.8 224.5L65.2 225.6L65.7 228.1L67.8 228.0L69.3 232.1L68.9 233.4L73.6 243.2L80.2 241.9L92.2 240.0L91.7 233.2L91.9 228.9L90.7 225.3L92.4 218.5L97.4 222.2L100.0 222.9L105.3 222.0L108.8 226.3L109.6 226.3L110.5 226.5L113.7 234.0L113.9 236.7L112.7 239.4L111.5 239.1L110.3 241.1L106.1 243.4L105.2 244.5L104.6 247.6L104.3 253.0L103.5 255.4L99.6 261.2L98.6 264.3L96.1 264.8L93.6 264.1L91.5 264.4L90.9 263.0L89.1 263.0L87.5 259.7L85.5 260.4L83.4 259.1L81.2 259.6L80.1 260.9L77.3 261.7L77.0 264.0L73.3 264.1L73.7 265.7L70.4 267.2L67.0 264.5L64.6 261.5L61.2 261.4L60.6 259.1L61.0 256.5L60.0 253.5L61.8 250.0L61.6 246.9L64.1 243.1L63.2 240.2L61.9 239.9L58.9 235.0L59.1 229.2Z"><title>양천구</title></path><path class="gu" d="M123.0 193.1L121.8 194.6L124.3 196.6L136.2 203.3L140.8 204.7L142.8 206.6L141.6 208.9L141.5 211.1L149.6 214.8L152.9 213.5L165.6 212.4L166.8 213.3L169.0 211.1L170.3 213.5L169.2 214.6L169.7 218.4L171.0 220.2L169.4 221.2L168.0 223.6L166.7 224.4L165.6 228.1L161.0 233.5L156.1 234.9L154.9 240.4L147.9 233.6L143.6 232.9L125.4 227.8L121.1 225.7L112.5 219.7L103.1 212.0L93.9 204.1L87.7 200.4L87.0 198.9L87.2 195.4L87.3 194.4L90.3 194.2L91.8 193.4L93.4 194.5L95.3 192.6L97.5 192.3L101.5 190.4L102.5 187.6L102.1 185.9L104.0 183.5L105.0 180.4L106.5 179.2L112.2 185.2L115.2 187.8L116.8 188.6L119.1 191.7L121.8 194.1L123.0 193.1Z"><title>마포구</title></path><path class="gu sdm" d="M160.3 162.3L162.1 163.6L162.8 165.5L162.1 169.7L163.2 171.6L165.6 171.9L165.0 175.0L166.5 178.6L166.6 180.1L165.3 185.4L167.6 187.6L164.5 189.3L162.8 191.2L173.1 204.0L175.4 207.9L173.3 208.6L170.7 210.6L169.0 211.1L166.8 213.3L165.6 212.4L152.9 213.5L149.6 214.8L141.5 211.1L141.6 208.9L142.8 206.6L140.8 204.7L136.2 203.3L124.3 196.6L121.8 194.6L123.0 193.1L130.4 184.0L133.3 184.5L133.0 186.9L138.2 186.0L139.4 182.9L141.1 182.9L142.7 181.7L142.5 179.6L143.4 177.3L147.1 173.7L152.6 171.5L153.3 167.0L154.0 165.3L156.0 165.3L157.7 162.3L160.3 162.3Z"><title>서대문구</title></path><path class="gu" d="M177.2 138.0L175.2 140.1L167.5 141.8L165.3 144.9L161.7 145.4L161.4 148.7L160.6 151.3L159.5 152.5L160.3 154.1L160.8 158.1L159.8 161.4L160.3 162.3L157.7 162.3L156.0 165.3L154.0 165.3L153.3 167.0L152.6 171.5L147.1 173.7L143.4 177.3L142.5 179.6L142.7 181.7L141.1 182.9L139.4 182.9L138.2 186.0L133.0 186.9L133.3 184.5L130.4 184.0L123.0 193.1L121.8 194.1L119.1 191.7L116.8 188.6L115.2 187.8L112.2 185.2L106.5 179.2L108.8 176.3L110.5 176.3L109.1 179.0L110.5 181.5L113.8 181.6L115.2 180.9L118.1 181.5L120.4 180.2L119.7 177.4L122.0 175.0L121.4 172.8L121.7 170.8L120.7 167.0L122.2 166.3L122.0 160.2L121.3 157.4L123.2 151.4L124.6 151.0L126.3 148.3L125.6 146.2L127.4 144.1L127.7 141.9L125.7 137.8L129.1 134.4L128.6 131.7L129.8 129.3L130.4 126.1L126.6 124.0L127.1 122.9L131.5 125.7L137.3 124.8L140.6 122.9L143.3 120.4L147.7 119.8L149.8 118.5L152.4 113.8L154.9 112.3L157.9 111.5L158.2 113.0L161.0 115.5L163.4 115.2L165.3 117.8L166.0 121.2L168.0 122.1L169.6 126.9L171.4 127.3L174.8 131.7L174.8 133.8L177.2 138.0Z"><title>은평구</title></path><path class="gu" d="M282.8 149.4L279.5 150.4L278.1 152.1L275.2 153.1L269.7 150.4L267.1 150.0L263.4 151.2L255.7 154.6L253.1 154.7L250.8 156.1L248.3 155.8L242.2 150.1L238.8 145.8L237.2 143.4L232.1 139.0L234.1 136.9L234.9 133.5L239.0 125.6L242.7 129.6L243.5 124.4L242.2 119.5L242.1 114.7L240.1 109.9L239.9 106.8L237.9 101.4L238.2 97.4L239.2 93.1L240.4 85.8L239.5 83.6L242.5 81.3L244.2 81.0L248.0 81.8L250.8 80.7L254.1 76.2L256.9 76.2L260.4 74.2L263.9 74.2L265.9 76.6L267.4 80.3L274.3 81.4L275.4 84.8L272.5 89.0L271.8 91.4L273.2 93.9L273.9 97.0L274.8 97.7L275.1 100.3L273.6 104.2L275.4 108.6L274.9 110.9L267.5 114.9L272.6 115.5L273.6 117.6L272.2 120.5L274.1 124.8L276.8 125.2L278.7 124.7L284.6 125.7L287.7 130.1L288.1 135.1L287.0 139.7L282.4 143.4L282.4 145.0L281.1 147.4L282.8 149.4Z"><title>노원구</title></path><path class="gu" d="M239.5 83.6L240.4 85.8L239.2 93.1L238.2 97.4L237.9 101.4L239.9 106.8L240.1 109.9L242.1 114.7L242.2 119.5L243.5 124.4L242.7 129.6L239.0 125.6L234.9 133.5L234.1 136.9L232.1 139.0L229.8 136.4L228.6 133.6L226.6 132.5L225.2 128.7L221.0 125.3L218.7 122.9L215.4 121.3L211.7 121.3L209.9 120.0L209.3 118.2L210.4 111.4L211.4 108.9L211.8 103.8L214.0 100.5L212.5 97.8L210.4 95.1L208.8 91.2L206.2 90.8L206.0 85.9L206.5 83.4L205.8 81.5L206.4 75.9L208.8 72.4L210.7 72.4L212.0 69.6L214.7 69.3L216.8 71.0L219.1 71.2L221.6 70.1L222.5 71.6L222.9 74.4L224.0 77.7L225.0 78.8L227.7 78.4L232.3 75.3L233.3 76.9L235.4 78.2L238.0 76.7L239.5 83.6Z"><title>도봉구</title></path><path class="gu" d="M206.0 85.9L206.2 90.8L208.8 91.2L210.4 95.1L212.5 97.8L214.0 100.5L211.8 103.8L211.4 108.9L210.4 111.4L209.3 118.2L209.9 120.0L211.7 121.3L215.4 121.3L218.7 122.9L221.0 125.3L225.2 128.7L226.6 132.5L228.6 133.6L229.8 136.4L232.1 139.0L237.2 143.4L238.8 145.8L236.3 147.7L234.1 151.6L230.9 154.6L228.5 157.7L223.4 161.0L223.2 157.9L220.2 157.5L217.0 158.9L214.6 156.5L211.0 154.6L207.9 153.8L206.1 151.7L205.3 149.2L205.6 146.4L199.4 144.5L196.7 141.2L194.7 140.3L194.0 138.3L192.5 138.3L188.1 134.9L187.3 133.8L188.5 130.1L186.2 126.8L187.6 124.4L186.6 120.6L184.6 118.1L183.4 115.5L183.6 113.8L187.6 111.1L190.1 106.7L193.8 105.4L194.5 102.6L194.8 98.3L193.9 92.9L192.9 91.1L194.6 90.2L197.8 86.8L202.2 85.5L206.0 85.9Z"><title>강북구</title></path><path class="gu" d="M179.8 138.9L181.5 136.8L184.8 135.6L187.3 133.8L188.1 134.9L192.5 138.3L194.0 138.3L194.7 140.3L196.7 141.2L199.4 144.5L205.6 146.4L205.3 149.2L206.1 151.7L207.9 153.8L211.0 154.6L214.6 156.5L217.0 158.9L220.2 157.5L223.2 157.9L223.4 161.0L228.5 157.7L230.9 154.6L234.1 151.6L236.3 147.7L238.8 145.8L242.2 150.1L248.3 155.8L250.8 156.1L253.1 154.7L255.7 154.6L256.0 163.4L255.0 160.9L253.5 160.9L253.6 163.3L251.0 164.7L248.4 165.0L246.1 169.1L244.7 168.6L240.5 170.2L239.1 169.0L237.0 173.8L234.1 173.8L231.4 174.9L230.2 178.8L228.1 180.2L222.4 187.7L217.7 192.0L216.6 191.2L213.8 191.5L212.3 188.2L211.0 187.8L206.4 189.6L205.0 188.0L204.8 184.8L204.1 183.2L201.3 181.0L200.2 177.7L196.0 177.9L195.0 178.9L192.6 178.7L188.7 177.6L186.7 176.3L185.2 174.3L184.9 171.0L187.5 170.7L189.7 168.9L188.3 163.0L189.1 159.6L188.9 155.5L185.9 153.5L184.3 147.5L183.0 145.7L183.3 141.1L181.0 141.4L179.8 138.9Z"><title>성북구</title></path><path class="gu" d="M255.7 154.6L263.4 151.2L267.1 150.0L269.7 150.4L275.2 153.1L278.1 152.1L279.5 150.4L282.8 149.4L287.2 149.6L291.7 152.4L291.4 154.0L292.2 158.5L291.4 161.3L292.7 162.6L292.5 165.6L289.2 170.2L289.4 171.1L292.8 175.1L292.3 176.1L288.8 176.8L286.6 180.9L285.6 185.4L279.4 186.2L280.5 188.3L280.4 191.7L279.1 194.3L279.0 196.4L277.9 197.5L271.3 200.4L265.2 198.6L261.4 198.1L261.1 192.0L260.2 188.7L255.5 181.3L254.2 173.9L254.7 172.0L256.6 169.0L256.8 167.4L256.0 163.4L255.7 154.6Z"><title>중랑구</title></path><path class="gu" d="M217.7 192.0L222.4 187.7L228.1 180.2L230.2 178.8L231.4 174.9L234.1 173.8L237.0 173.8L239.1 169.0L240.5 170.2L244.7 168.6L246.1 169.1L248.4 165.0L251.0 164.7L253.6 163.3L253.5 160.9L255.0 160.9L256.0 163.4L256.8 167.4L256.6 169.0L254.7 172.0L254.2 173.9L255.5 181.3L260.2 188.7L261.1 192.0L261.4 198.1L256.3 209.9L255.2 209.4L246.3 207.7L245.3 207.2L237.2 199.6L232.7 197.0L229.3 197.1L225.2 199.6L222.9 200.1L217.8 198.3L217.7 192.0Z"><title>동대문구</title></path><path class="gu" d="M261.4 198.1L265.2 198.6L271.3 200.4L277.9 197.5L279.0 196.4L281.6 199.1L280.9 200.3L279.8 207.6L279.2 209.9L286.6 210.1L288.6 209.6L289.2 211.3L289.2 216.6L287.8 222.3L285.8 226.4L280.4 235.8L277.3 242.1L272.2 243.0L265.9 245.3L260.6 246.2L256.9 246.0L252.2 244.7L244.0 240.7L252.1 222.7L257.5 210.5L256.3 209.9L261.4 198.1Z"><title>광진구</title></path><path class="gu" d="M217.8 198.3L222.9 200.1L225.2 199.6L229.3 197.1L232.7 197.0L237.2 199.6L245.3 207.2L246.3 207.7L255.2 209.4L256.3 209.9L257.5 210.5L252.1 222.7L244.0 240.7L238.1 237.3L236.4 235.6L235.7 237.3L223.0 231.0L219.0 232.2L215.9 234.7L211.1 230.9L206.9 230.3L206.0 228.0L206.2 225.9L207.0 221.8L208.6 221.4L212.7 216.5L213.1 213.9L214.9 212.4L217.4 212.1L218.1 208.8L220.1 207.0L220.5 205.0L218.0 204.8L217.8 198.3Z"><title>성동구</title></path><path class="gu" d="M206.2 225.9L206.0 228.0L206.9 230.3L211.1 230.9L215.9 234.7L208.8 241.9L205.8 244.9L204.2 248.2L202.4 250.0L197.8 253.0L191.0 257.0L189.5 256.0L185.6 256.2L183.7 257.6L171.5 256.9L165.8 254.4L162.7 252.2L160.3 249.7L158.4 246.2L157.4 242.7L154.9 240.4L156.1 234.9L161.0 233.5L165.6 228.1L166.7 224.4L168.0 223.6L169.4 221.2L171.0 220.2L169.7 218.4L172.4 215.8L177.5 216.0L180.9 216.8L181.4 214.9L184.1 216.5L186.6 216.9L187.9 216.2L189.8 218.4L191.7 218.5L195.7 222.6L198.2 220.0L201.5 220.3L202.7 219.5L203.2 223.7L205.1 226.0L206.2 225.9Z"><title>용산구</title></path><path class="gu" d="M217.8 198.3L218.0 204.8L220.5 205.0L220.1 207.0L218.1 208.8L217.4 212.1L214.9 212.4L213.1 213.9L212.7 216.5L208.6 221.4L207.0 221.8L206.2 225.9L205.1 226.0L203.2 223.7L202.7 219.5L201.5 220.3L198.2 220.0L195.7 222.6L191.7 218.5L189.8 218.4L187.9 216.2L186.6 216.9L184.1 216.5L181.4 214.9L180.9 216.8L177.5 216.0L172.4 215.8L169.7 218.4L169.2 214.6L170.3 213.5L169.0 211.1L170.7 210.6L173.3 208.6L175.4 207.9L173.1 204.0L175.0 201.8L178.0 200.8L181.9 200.7L190.7 201.9L196.8 201.3L200.7 200.4L211.8 200.2L215.5 198.3L217.8 198.3Z"><title>중구</title></path><path class="gu" d="M177.2 138.0L179.8 138.9L181.0 141.4L183.3 141.1L183.0 145.7L184.3 147.5L185.9 153.5L188.9 155.5L189.1 159.6L188.3 163.0L189.7 168.9L187.5 170.7L184.9 171.0L185.2 174.3L186.7 176.3L188.7 177.6L192.6 178.7L195.0 178.9L196.0 177.9L200.2 177.7L201.3 181.0L204.1 183.2L204.8 184.8L205.0 188.0L206.4 189.6L211.0 187.8L212.3 188.2L213.8 191.5L216.6 191.2L217.7 192.0L217.8 198.3L215.5 198.3L211.8 200.2L200.7 200.4L196.8 201.3L190.7 201.9L181.9 200.7L178.0 200.8L175.0 201.8L173.1 204.0L162.8 191.2L164.5 189.3L167.6 187.6L165.3 185.4L166.6 180.1L166.5 178.6L165.0 175.0L165.6 171.9L163.2 171.6L162.1 169.7L162.8 165.5L162.1 163.6L160.3 162.3L159.8 161.4L160.8 158.1L160.3 154.1L159.5 152.5L160.6 151.3L161.4 148.7L161.7 145.4L165.3 144.9L167.5 141.8L175.2 140.1L177.2 138.0Z"><title>종로구</title></path></g>
+  <text class="map-cap" x="30" y="30">서울특별시</text>
+  <text class="gu-label" x="151.3" y="196.6" text-anchor="middle">서대문구</text>
+  <rect class="zoom-box" x="118.8" y="159.3" width="59.6" height="58.5"/>
+  <path class="leader" d="M178.4 159.3L372 34M178.4 217.8L372 284"/>
+  <rect class="inset-frame" x="372" y="34" width="214" height="250"/>
+  <text class="map-cap" x="372" y="26">서대문구 행정동</text>
+  <g class="dong-layer"><path class="dong-shape" data-dong="연희동" data-cx="470.7" data-cy="194.3" d="M483.7 155.1L511.5 176.2L503.6 193.2L475.7 215.1L473.8 224.9L454.5 231.2L450.1 218.5L427.0 210.6L424.4 209.0L439.1 194.2L454.8 179.4L482.0 163.9L483.7 155.1Z"><title>연희동</title></path><path class="dong-shape" data-dong="신촌동" data-cx="494.2" data-cy="226.3" d="M511.5 176.2L520.0 206.9L520.5 238.7L517.5 249.1L511.7 249.5L482.7 255.9L452.9 242.3L454.4 231.5L454.5 231.2L473.8 224.9L475.7 215.1L503.6 193.2L511.5 176.2Z"><title>신촌동</title></path><path class="dong-shape" data-dong="북아현동" data-cx="537.2" data-cy="242.1" d="M556.1 240.7L554.4 242.2L546.3 250.2L517.6 249.1L517.5 249.1L520.5 238.7L548.8 231.6L556.1 240.7Z"><title>북아현동</title></path><path class="dong-shape" data-dong="충현동" data-cx="544.5" data-cy="223.6" d="M520.0 206.9L531.6 203.6L547.4 217.8L567.0 213.5L569.4 216.2L578.0 230.6L556.1 240.7L548.8 231.6L520.5 238.7L520.0 206.9Z"><title>충현동</title></path><path class="dong-shape" data-dong="북가좌2동" data-cx="413.0" data-cy="160.6" d="M413.6 138.6L421.4 152.9L436.0 153.7L421.9 167.2L417.6 182.0L393.7 164.0L413.6 138.6Z"><title>북가좌2동</title></path><path class="dong-shape" data-dong="북가좌1동" data-cx="399.1" data-cy="181.1" d="M384.4 175.9L393.7 164.0L417.6 182.0L419.4 182.3L403.9 197.2L380.0 181.1L384.4 175.9Z"><title>북가좌1동</title></path><path class="dong-shape" data-dong="남가좌2동" data-cx="437.0" data-cy="172.9" d="M436.0 153.7L442.4 146.1L454.8 179.4L439.1 194.2L419.4 182.3L417.6 182.0L421.9 167.2L436.0 153.7Z"><title>남가좌2동</title></path><path class="dong-shape" data-dong="남가좌1동" data-cx="421.6" data-cy="195.7" d="M419.4 182.3L439.1 194.2L424.4 209.0L403.9 197.2L419.4 182.3Z"><title>남가좌1동</title></path><path class="dong-shape" data-dong="홍은2동" data-cx="469.1" data-cy="139.5" d="M458.1 120.8L473.3 104.2L487.7 99.8L496.0 122.6L481.0 134.3L483.7 155.1L482.0 163.9L454.8 179.4L442.4 146.1L441.8 143.8L457.2 133.7L458.1 120.8Z"><title>홍은2동</title></path><path class="dong-shape" data-dong="홍은1동" data-cx="510.5" data-cy="91.1" d="M530.0 70.4L528.9 89.5L539.3 106.9L512.0 97.9L512.8 110.5L497.2 124.3L496.0 122.6L487.7 99.8L498.9 73.3L522.0 62.1L530.0 70.4Z"><title>홍은1동</title></path><path class="dong-shape" data-dong="홍제2동" data-cx="529.6" data-cy="149.2" d="M541.0 144.6L543.9 150.5L552.0 161.5L531.3 168.6L506.3 134.8L525.1 130.8L541.0 144.6Z"><title>홍제2동</title></path><path class="dong-shape" data-dong="홍제3동" data-cx="524.3" data-cy="120.5" d="M539.3 106.9L545.2 122.3L541.0 144.6L525.1 130.8L506.3 134.8L497.2 124.3L512.8 110.5L512.0 97.9L539.3 106.9Z"><title>홍제3동</title></path><path class="dong-shape" data-dong="홍제1동" data-cx="507.2" data-cy="159.7" d="M497.2 124.3L506.3 134.8L531.3 168.6L532.4 170.0L523.2 183.2L531.6 203.6L520.0 206.9L511.5 176.2L483.7 155.1L481.0 134.3L496.0 122.6L497.2 124.3Z"><title>홍제1동</title></path><path class="dong-shape" data-dong="천연동" data-cx="542.3" data-cy="197.0" d="M548.8 190.3L567.0 213.5L547.4 217.8L531.6 203.6L523.2 183.2L532.4 170.0L548.8 190.3Z"><title>천연동</title></path></g>
+  <g id="dongPin" class="dong-pin" hidden><circle r="5"/><text x="0" y="-10" text-anchor="middle"></text></g>
+  <g transform="translate(560 306)"><path d="M0 -12l5 14-5-3.5-5 3.5z" fill="#1b2b3a"/><text x="0" y="12" text-anchor="middle" class="n-mark">N</text></g>
+  <text class="map-src" x="372" y="324">경계: 통계청(2013), southkorea/seoul-maps</text>
+</svg>
+      </div>
+      <div class="sheet-foot">
+        <span class="legend"><i class="lg-gu"></i>서대문구 <i class="lg-dong"></i>조사할 동</span>
+        <span>37°34′N · 126°56′E</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>우리가 할 활동</h3>
+      <p class="sub">아래 순서대로 왼쪽 메뉴를 따라가며 작성해요.</p>
+      <ol class="flow">
+        <li><b>자료 수집</b><span>인구·토지 이용·산업 구조·생태환경 4개 분야의 과거와 현재를 비교하고, 분야별로 변화를 정리해요.</span></li>
+        <li><b>분야별 변화 종합</b><span>4개 분야의 변화를 한눈에 모아 보고, 수치는 그래프로 자동 정리돼요. 이를 보며 우리 동의 공간이 어떻게 변했는지 종합해요.</span></li>
+        <li><b>공간 변화가 초래한 양상</b><span>공간 변화 하나를 골라, 그 변화로 우리 동에 어떤 양상이 나타났는지 근거를 들어 정리해요.</span></li>
+        <li><b>PDF로 저장해 제출</b><span>단계별로 만든 자료를 한 개의 PDF 파일로 저장해 선생님께 제출해요.</span></li>
+      </ol>
+    </div>
+
+    <div class="panel">
+      <h3>조사자 정보</h3>
+      <div class="grid2">
+        <label class="fld"><span>모둠원 이름</span><input type="text" data-key="s0-members" placeholder="예: 김○○, 이○○, 박○○"></label>
+        <label class="fld"><span>조사할 동(서대문구)</span>
+          <input type="text" data-key="s0-dong" placeholder="예: 홍은1동"></label>
+      </div>
+      <p class="hint" style="margin:0">조사할 동을 적으면 맨 위 제목이 ‘서울특별시 서대문구 ○○동은 어떻게 달라졌을까?’로 바뀌고, 지도에 그 동이 표시돼요.</p>
+    </div>
+
+    <div class="step-nav"><span></span><button class="btn btn-primary" type="button" data-go="1">1단계 자료 수집으로</button></div>
+  </section>
+
+  <!-- ===================== 1. 자료 수집 ===================== -->
+  <section class="step" id="step1" data-title="자료 수집" data-desc="4개 분야의 과거와 현재" data-pin="1">
+    <div class="step-head">
+      <div class="step-num">1단계</div>
+      <h2>자료를 모으고, 변화 양상을 정리해요</h2>
+      <p>SGIS를 중심으로 우리 동의 인구·토지 이용·산업 구조·생태환경 4개 분야를 하나씩 살펴봐요. 분야마다 과거와 현재의 모습을 적고, 바로 아래에 어떻게 변했는지 한두 문장으로 정리하세요.</p>
+      <div class="goal"><b>이 단계의 목표</b> 분야별로 과거와 현재를 비교해 무엇이 어떻게 바뀌었는지 자료를 근거로 쓴다.</div>
+    </div>
+
+    <div class="portal">
+      <div>
+        <h3>SGIS 통계주제도에서 통계 찾기</h3>
+        <ol>
+          <li>SGIS 상단 메뉴에서 <b>통계주제도</b>를 엽니다.</li>
+          <li>조사할 분야에 맞는 주제(예: 인구와 가구, 주거와 교통)를 고르고 지표를 선택합니다.</li>
+          <li>지도를 서대문구의 조사할 동으로 옮기고, 연도를 바꿔 가며 과거와 현재를 비교해요.</li>
+          <li>우리 동과 이웃 동을 함께 비교하면 우리 동의 특징이 더 잘 드러나요.</li>
+        </ol>
+        <p style="margin:10px 0 0;font-size:14px;color:#2d3f4d;background:#fff;border:1px solid #c3d8e8;border-radius:8px;padding:10px 12px">생태환경처럼 통계주제도로 확인하기 어려운 분야는 서대문구청 누리집, 관련 기사, 현장 관찰로 확인한 내용을 적어도 돼요.</p>
+      </div>
+      <a class="go" href="https://sgis.kostat.go.kr" target="_blank" rel="noopener">SGIS 바로가기<small>sgis.kostat.go.kr · 새 창에서 열려요</small></a>
+    </div>
+    <div class="team-guide">
+      <h3>모둠 활동 방법</h3>
+      <ol>
+        <li><b>나누어 조사하기</b> 모둠원끼리 인구·토지 이용·산업 구조·생태환경 중 한 분야씩 맡아 자료를 찾아요. 모둠원이 4명보다 적으면 한 사람이 두 분야를 맡아요.</li>
+        <li><b>함께 작성하기</b> 각자 찾은 자료를 모둠원에게 설명하고, 과거·현재 모습을 다 같이 확인하며 적어요.</li>
+        <li><b>함께 분석하기</b> 분야별 ‘변화 정리’는 모둠원 모두가 의견을 나누어 작성해요.</li>
+      </ol>
+    </div>
+    <div class="notice"><b>수치로 비교하면 좋은 내용만 수치로 기록해요!</b><span>인구 수, 가구 수, 사업체 수처럼 숫자로 비교할 때 변화가 잘 드러나는 지표만 ‘수치로 기록하기’에 적어요. 2단계에서 그래프로 그려져요. 그 밖의 내용은 과거와 현재의 모습을 글로 적어요.</span></div>
+
+    <div class="field-card">
+      <div class="fc-head"><span class="fc-no">1</span><h3>인구</h3></div>
+      <p class="fc-guide">인구 규모, 연령 구조, 가구 구성은 어떻게 바뀌었나요?</p>
+      <label class="fld"><span>확인한 자료 <em>선택</em></span><input type="text" data-key="cat-pop-src" data-opt="1" placeholder="예: SGIS 통계주제도 · 총인구, 1인 가구"></label>
+      <div class="grid2">
+        <label class="fld"><span>과거 모습</span><textarea data-key="cat-pop-past" rows="2" maxlength="300" placeholder="예: 2010년 약 32,000명. 어린이와 청장년층이 많았다."></textarea></label>
+        <label class="fld"><span>현재 모습</span><textarea data-key="cat-pop-now" rows="2" maxlength="300" placeholder="예: 2023년 약 28,500명. 65세 이상 인구와 1인 가구가 늘었다."></textarea></label>
+      </div>
+      <details class="num-box" data-numbox="0"><summary>수치로 기록하기 <small>선택 · 그래프로 그려져요</small></summary><div class="inner">
+        <div class="fc-row">
+          <label class="fld"><span>지표(단위)</span><input type="text" data-key="st-0-name" data-opt="1" placeholder="예: 총인구(명)"></label>
+          <label class="fld"><span>과거 연도</span><input type="text" data-key="st-0-y0" data-opt="1" inputmode="numeric" placeholder="2010"></label>
+          <label class="fld"><span>과거 값</span><input type="text" data-key="st-0-v0" data-opt="1" inputmode="decimal"></label>
+          <label class="fld"><span>현재 연도</span><input type="text" data-key="st-0-y1" data-opt="1" inputmode="numeric" placeholder="2023"></label>
+          <label class="fld"><span>현재 값</span><input type="text" data-key="st-0-v1" data-opt="1" inputmode="decimal"></label>
+          <div class="fc-rate">변화율<span class="rate" data-rate="st-0">–</span></div>
+        </div>
+        <label class="fld fc-mid" style="margin-bottom:0"><span>중간 연도 값 <em>선택 · 넣으면 꺾은선그래프로 그려져요</em></span><input type="text" data-key="st-0-mid" data-opt="1" placeholder="예: 2015:31000, 2020:29500"></label>
+      </div></details>
+      <label class="fld" style="margin:0"><span>인구의 변화 정리 <em class="cnt" data-for="an-pop"></em></span><textarea data-key="an-pop" rows="2" maxlength="400" placeholder="예: 인구는 줄었지만 1인 가구가 늘어, 가족 중심에서 혼자 사는 사람이 많은 동네로 바뀌었다."></textarea></label>
+    </div>
+    <div class="field-card">
+      <div class="fc-head"><span class="fc-no">2</span><h3>토지 이용</h3></div>
+      <p class="fc-guide">주거지·상업지·녹지 등 땅의 쓰임은 어떻게 바뀌었나요?</p>
+      <label class="fld"><span>확인한 자료 <em>선택</em></span><input type="text" data-key="cat-land-src" data-opt="1" placeholder="예: SGIS 통계주제도 · 주택 유형, 지도 비교"></label>
+      <div class="grid2">
+        <label class="fld"><span>과거 모습</span><textarea data-key="cat-land-past" rows="2" maxlength="300" placeholder="예: 낮은 단독 주택이 모여 있는 조용한 주거지였다."></textarea></label>
+        <label class="fld"><span>현재 모습</span><textarea data-key="cat-land-now" rows="2" maxlength="300" placeholder="예: 큰길을 따라 상가와 오피스텔이 들어서고, 골목 주택도 다세대 주택으로 바뀌었다."></textarea></label>
+      </div>
+      <details class="num-box" data-numbox="1"><summary>수치로 기록하기 <small>선택 · 그래프로 그려져요</small></summary><div class="inner">
+        <div class="fc-row">
+          <label class="fld"><span>지표(단위)</span><input type="text" data-key="st-1-name" data-opt="1" placeholder="예: 아파트 수(호)"></label>
+          <label class="fld"><span>과거 연도</span><input type="text" data-key="st-1-y0" data-opt="1" inputmode="numeric" placeholder="2010"></label>
+          <label class="fld"><span>과거 값</span><input type="text" data-key="st-1-v0" data-opt="1" inputmode="decimal"></label>
+          <label class="fld"><span>현재 연도</span><input type="text" data-key="st-1-y1" data-opt="1" inputmode="numeric" placeholder="2023"></label>
+          <label class="fld"><span>현재 값</span><input type="text" data-key="st-1-v1" data-opt="1" inputmode="decimal"></label>
+          <div class="fc-rate">변화율<span class="rate" data-rate="st-1">–</span></div>
+        </div>
+        <label class="fld fc-mid" style="margin-bottom:0"><span>중간 연도 값 <em>선택 · 넣으면 꺾은선그래프로 그려져요</em></span><input type="text" data-key="st-1-mid" data-opt="1" placeholder="예: 2015:31000, 2020:29500"></label>
+      </div></details>
+      <label class="fld" style="margin:0"><span>토지 이용의 변화 정리 <em class="cnt" data-for="an-land"></em></span><textarea data-key="an-land" rows="2" maxlength="400" placeholder="예: 주거 중심이던 땅이 상업·주거가 섞인 공간으로 바뀌었다."></textarea></label>
+    </div>
+    <div class="field-card">
+      <div class="fc-head"><span class="fc-no">3</span><h3>산업 구조</h3></div>
+      <p class="fc-guide">어떤 산업(가게·회사)이 늘고 줄었나요?</p>
+      <label class="fld"><span>확인한 자료 <em>선택</em></span><input type="text" data-key="cat-ind-src" data-opt="1" placeholder="예: SGIS 통계주제도 · 산업별 사업체 수"></label>
+      <div class="grid2">
+        <label class="fld"><span>과거 모습</span><textarea data-key="cat-ind-past" rows="2" maxlength="300" placeholder="예: 동네 시장과 작은 인쇄소, 제조업 공장이 많았다."></textarea></label>
+        <label class="fld"><span>현재 모습</span><textarea data-key="cat-ind-now" rows="2" maxlength="300" placeholder="예: 카페·음식점·편의점 같은 서비스업이 크게 늘었다."></textarea></label>
+      </div>
+      <details class="num-box" data-numbox="2"><summary>수치로 기록하기 <small>선택 · 그래프로 그려져요</small></summary><div class="inner">
+        <div class="fc-row">
+          <label class="fld"><span>지표(단위)</span><input type="text" data-key="st-2-name" data-opt="1" placeholder="예: 숙박·음식점업 사업체 수(개)"></label>
+          <label class="fld"><span>과거 연도</span><input type="text" data-key="st-2-y0" data-opt="1" inputmode="numeric" placeholder="2010"></label>
+          <label class="fld"><span>과거 값</span><input type="text" data-key="st-2-v0" data-opt="1" inputmode="decimal"></label>
+          <label class="fld"><span>현재 연도</span><input type="text" data-key="st-2-y1" data-opt="1" inputmode="numeric" placeholder="2023"></label>
+          <label class="fld"><span>현재 값</span><input type="text" data-key="st-2-v1" data-opt="1" inputmode="decimal"></label>
+          <div class="fc-rate">변화율<span class="rate" data-rate="st-2">–</span></div>
+        </div>
+        <label class="fld fc-mid" style="margin-bottom:0"><span>중간 연도 값 <em>선택 · 넣으면 꺾은선그래프로 그려져요</em></span><input type="text" data-key="st-2-mid" data-opt="1" placeholder="예: 2015:31000, 2020:29500"></label>
+      </div></details>
+      <label class="fld" style="margin:0"><span>산업 구조의 변화 정리 <em class="cnt" data-for="an-ind"></em></span><textarea data-key="an-ind" rows="2" maxlength="400" placeholder="예: 제조업 중심에서 방문객을 상대하는 서비스업 중심으로 바뀌었다."></textarea></label>
+    </div>
+    <div class="field-card">
+      <div class="fc-head"><span class="fc-no">4</span><h3>생태환경</h3></div>
+      <p class="fc-guide">녹지, 공원, 하천, 공기 등 자연환경은 어떻게 바뀌었나요?</p>
+      <label class="fld"><span>확인한 자료 <em>선택</em></span><input type="text" data-key="cat-eco-src" data-opt="1" placeholder="예: 서대문구청 누리집 · 홍제천 정비 사업, 관련 기사"></label>
+      <div class="grid2">
+        <label class="fld"><span>과거 모습</span><textarea data-key="cat-eco-past" rows="2" maxlength="300" placeholder="예: 하천이 덮여 도로로 쓰였고, 공원이 거의 없었다."></textarea></label>
+        <label class="fld"><span>현재 모습</span><textarea data-key="cat-eco-now" rows="2" maxlength="300" placeholder="예: 하천이 복원되어 산책로와 생태 공간이 생겼다."></textarea></label>
+      </div>
+      <details class="num-box" data-numbox="3"><summary>수치로 기록하기 <small>선택 · 그래프로 그려져요</small></summary><div class="inner">
+        <div class="fc-row">
+          <label class="fld"><span>지표(단위)</span><input type="text" data-key="st-3-name" data-opt="1" placeholder="예: 공원 면적(㎡)"></label>
+          <label class="fld"><span>과거 연도</span><input type="text" data-key="st-3-y0" data-opt="1" inputmode="numeric" placeholder="2010"></label>
+          <label class="fld"><span>과거 값</span><input type="text" data-key="st-3-v0" data-opt="1" inputmode="decimal"></label>
+          <label class="fld"><span>현재 연도</span><input type="text" data-key="st-3-y1" data-opt="1" inputmode="numeric" placeholder="2023"></label>
+          <label class="fld"><span>현재 값</span><input type="text" data-key="st-3-v1" data-opt="1" inputmode="decimal"></label>
+          <div class="fc-rate">변화율<span class="rate" data-rate="st-3">–</span></div>
+        </div>
+        <label class="fld fc-mid" style="margin-bottom:0"><span>중간 연도 값 <em>선택 · 넣으면 꺾은선그래프로 그려져요</em></span><input type="text" data-key="st-3-mid" data-opt="1" placeholder="예: 2015:31000, 2020:29500"></label>
+      </div></details>
+      <label class="fld" style="margin:0"><span>생태환경의 변화 정리 <em class="cnt" data-for="an-eco"></em></span><textarea data-key="an-eco" rows="2" maxlength="400" placeholder="예: 하천 복원으로 주민이 쉴 수 있는 녹지 공간이 늘었다."></textarea></label>
+    </div>
+
+    <div class="step-nav"><button class="btn btn-ghost" type="button" data-go="0">이전 단계</button><button class="btn btn-primary" type="button" data-go="2">2단계로</button></div>
+  </section>
+
+  <!-- ===================== 3. 시각화 ===================== -->
+  <section class="step" id="step3" data-title="분야별 변화 종합" data-desc="표와 그래프로 모아 보기" data-pin="2">
+    <div class="step-head">
+      <div class="step-num">2단계</div>
+      <h2>4개 분야의 변화를 모아 종합해요</h2>
+      <p>1단계에서 정리한 4개 분야의 변화가 한 표로 모이고, 수치 자료는 그래프로 자동 정리돼요. 이를 보며 우리 동의 공간이 어떻게 변했는지 종합하세요.</p>
+      <div class="goal"><b>이 단계의 목표</b> 분야별 변화를 서로 연결해 우리 동의 공간 변화를 종합적으로 설명한다.</div>
+    </div>
+    <div class="panel">
+      <h3>분야별 변화 한눈에 보기</h3>
+      <p class="sub">1단계에 적은 내용이 자동으로 모여요.</p>
+      <div class="tbl-wrap" id="chgTable"></div>
+    </div>
+    <div class="panel">
+      <h3>자동 시각화</h3>
+      <p class="sub">1단계에서 ‘수치로 기록하기’에 적은 지표만 그래프로 그려져요. 두 시점은 막대그래프, 중간 연도 값이 있으면 꺾은선그래프, 여러 지표는 변화율 그래프로 보여 줘요.</p>
+      <div class="viz-grid" id="vizArea"></div>
+      <button class="btn btn-ghost btn-sm" type="button" data-go="1" style="margin-top:14px">1단계 고치러 가기</button>
+    </div>
+    <div class="panel pattern">
+      <h3>분야별 변화 종합하기</h3>
+      <ul class="guide-q">
+        <li>네 분야 중 가장 크게 바뀐 분야는 무엇인가요?</li>
+        <li>인구·토지 이용·산업 구조·생태환경의 변화는 서로 어떻게 연결되나요?</li>
+      </ul>
+      <label class="fld" style="margin:0"><span>네 분야의 변화를 종합하면, 우리 동의 공간은 어떻게 변했나요? <em class="cnt" data-for="cmp-sum"></em></span>
+        <textarea data-key="cmp-sum" rows="6" maxlength="1000" placeholder="예: 주택이 상가로 바뀌는 토지 이용 변화와 함께 서비스업이 늘었고, 1인 가구가 많아졌다. 우리 동은 가족이 사는 주거지에서 사람들이 찾아오는 상업·주거 혼합 공간으로 바뀌었다."></textarea></label>
+    </div>
+    <div class="step-nav"><button class="btn btn-ghost" type="button" data-go="1">이전 단계</button><button class="btn btn-primary" type="button" data-go="3">3단계로</button></div>
+  </section>
+
+  <!-- ===================== 4. 초래한 양상 ===================== -->
+  <section class="step" id="step4" data-title="공간 변화가 초래한 양상" data-desc="변화와 그 결과 연결하기" data-pin="3">
+    <div class="step-head">
+      <div class="step-num">3단계</div>
+      <h2>공간 변화가 초래한 양상을 탐구해요</h2>
+      <p>공간이 바뀌면 그 결과로 지역에 새로운 모습이 나타나요. 예를 들어 주거지가 상업지로 바뀌면 유동 인구가 늘고 새로운 상권이 생겨요. 1·2단계에서 찾은 공간 변화를 골라, 그 변화가 우리 동에 어떤 양상을 가져왔는지 근거를 들어 정리하세요.</p>
+      <div class="goal"><b>이 단계의 목표</b> 공간 변화와 그 변화가 초래한 양상을 원인과 결과로 연결해 근거를 들어 설명한다.</div>
+    </div>
+    <div id="probList"></div>
+    <button class="btn btn-add" type="button" data-add="prob" style="margin-bottom:20px">양상 추가 (최대 2개)</button>
+    <div class="panel pattern">
+      <h3>오늘의 탐구 정리</h3>
+      <label class="fld" style="margin:8px 0 0"><span>공간 변화가 우리 동에 초래한 양상을 한 문단으로 정리하면? <em class="cnt" data-for="s4-conclusion"></em></span>
+        <textarea data-key="s4-conclusion" rows="5" maxlength="900" placeholder="예: 신촌동은 대학가 주변 주택이 원룸과 상가로 바뀌는 공간 변화가 일어났다. 그 결과 1인 가구가 늘어 인구 구성이 바뀌었고, 큰길을 중심으로 서비스업 상권이 형성되었다."></textarea></label>
+    </div>
+    <div class="goal" style="margin:0 0 20px;max-width:none"><b>다음 시간에는</b> 오늘 탐구한 변화를 바탕으로 우리 동이 마주한 과제를 살펴보고, 지역의 지속가능성을 고려하여 해결 방안을 모색해 봐요.</div>
+    <div class="step-nav"><button class="btn btn-ghost" type="button" data-go="2">이전 단계</button><button class="btn btn-primary" type="button" data-go="4">PDF 저장과 제출로</button></div>
+  </section>
+
+  <!-- ===================== 5. PDF 저장과 제출 ===================== -->
+  <section class="step" id="step5" data-title="PDF 저장과 제출" data-desc="결과물을 PDF로 저장하기" data-pin="✓">
+    <div class="step-head no-print">
+      <div class="step-num">마무리</div>
+      <h2>단계별로 만든 자료를 PDF로 저장해 제출해요</h2>
+      <p>아래 미리보기에 1~3단계에서 만든 자료가 모두 정리되어 있어요. 내용을 확인한 뒤 PDF로 저장하고, 그 파일을 선생님께 제출하세요.</p>
+    </div>
+    <div class="panel no-print"><h3>단계별 작성 현황</h3><ul class="check-list" id="checkList"></ul></div>
+    <div class="submit-box no-print">
+      <h3>PDF로 저장하고 제출하기</h3>
+      <p>‘PDF로 저장’을 누르면 <b id="pdfNameView"></b> 파일이 내려받아져요. 이 파일을 선생님이 안내한 곳(구글 클래스룸, 학급 게시판 등)에 올리면 제출 끝! 파일 이름은 바꾸지 마세요.</p>
+      <p style="margin-top:-6px">PDF 안에는 선생님이 ‘제출물 모아 보기’에서 모든 모둠의 내용을 한 화면에 모아 볼 수 있도록 작성한 내용이 함께 저장돼요.</p>
+      <button class="btn btn-primary" type="button" id="savePdf">PDF로 저장</button>
+      <p class="pdf-status" id="pdfStatus" hidden></p>
+    </div>
+    <div class="preview-wrap"><div class="report" id="preview"></div></div>
+    <div class="step-nav no-print" style="margin-top:20px"><button class="btn btn-ghost" type="button" data-go="3">이전 단계</button><span></span></div>
+  </section>
+
+  </main>
+</div>
+
+<div class="teacher" id="teacherView" hidden>
+  <div class="t-head">
+    <div>
+      <p class="t-kicker">교사용</p>
+      <h2>제출물 모아 보기</h2>
+      <p class="sub">학생들이 제출한 PDF를 한꺼번에 넣으면, PDF 안에 함께 저장된 작성 내용을 읽어 모든 모둠의 결과를 한 화면에 모아 보여 줘요. 항목별로 나란히 비교하거나 PDF 원본을 넘겨 볼 수도 있어요. 넣은 파일은 이 화면에서만 열리고 어디로도 전송되지 않으며, 창을 닫으면 사라져요.</p>
+    </div>
+    <button class="btn btn-ghost" type="button" id="closeTeacher">학습지로 돌아가기</button>
+  </div>
+<label class="drop t-drop" id="tDrop"><input type="file" accept=".pdf,application/pdf,.json,application/json" multiple hidden id="tFiles"><span class="ico">+</span><span><b>제출된 PDF 여러 개 선택</b> 또는 한꺼번에 끌어다 놓기<small>학생의 작업 파일(.json)도 넣을 수 있어요. 파일 이름이 같으면 나중에 넣은 파일로 바뀌어요.</small></span></label>
+  <p class="empty-note" id="tEmpty">아직 불러온 제출물이 없어요.</p>
+  <div id="tBody" hidden>
+    <div class="t-stats" id="tStats"></div>
+    <div class="t-tools">
+      <label class="sel">조사한 동 <select id="tTeam"></select></label>
+      <div class="seg" role="group" aria-label="보기 방식"><button type="button" data-view="all" aria-pressed="true">한눈에 보기</button><button type="button" data-view="item" aria-pressed="false">항목별 비교</button><button type="button" data-view="pdf" aria-pressed="false">PDF 원본</button></div>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost btn-sm" type="button" id="tClear">모두 비우기</button>
+    </div>
+    <div id="vAll"><div class="g-grid" id="tGrid"></div></div>
+    <div id="vItem" hidden>
+      <div class="i-tools"><label class="sel">비교할 항목 <select id="tItemSel"></select></label><span class="hint" style="margin:0">모든 모둠의 같은 항목을 나란히 놓고 비교해요.</span></div>
+      <div class="g-grid" id="tItem"></div>
+    </div>
+    <div id="vPdf" hidden>
+      <div class="t-split">
+        <aside class="t-side" id="tSide" aria-label="제출 목록"></aside>
+        <div>
+          <div class="t-nav"><button class="btn btn-ghost btn-sm" type="button" id="tPrev">◀ 이전</button><span class="pos" id="tPos"></span><button class="btn btn-ghost btn-sm" type="button" id="tNext">다음 ▶</button><span class="spacer"></span><div class="seg" role="group" aria-label="PDF 보기 방식"><button type="button" id="vOne" aria-pressed="true">한 개씩</button><button type="button" id="vTwo" aria-pressed="false">두 개씩</button></div></div>
+          <div class="t-panes" id="tPanes"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="reportModal" hidden role="dialog" aria-modal="true" aria-label="모둠 결과 자세히 보기">
+  <div class="modal-box">
+    <div class="modal-bar"><b id="rmTitle"></b><button class="btn btn-ghost btn-sm" type="button" id="rmPrev">이전 모둠</button><button class="btn btn-ghost btn-sm" type="button" id="rmNext">다음 모둠</button><button class="btn btn-primary btn-sm" type="button" id="rmClose">닫기</button></div>
+    <div class="modal-body"><div class="report" id="rmBody"></div></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox"><img alt="확대한 자료"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+"use strict";
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const br=s=>esc(s).replace(/\n/g,"<br>");
+const uid=()=>Math.random().toString(36).slice(2,8);
+
+const AREAS=[
+  {k:"pop",n:"인구",q:"인구 규모, 연령 구조, 가구 구성은 어떻게 바뀌었나요?"},
+  {k:"ind",n:"산업",q:"주요 산업, 사업체, 일자리, 상권은 어떻게 바뀌었나요?"},
+  {k:"land",n:"토지 이용",q:"농경지·주거지·상업지·녹지의 분포와 비중은 어떻게 바뀌었나요?"},
+  {k:"env",n:"환경",q:"녹지, 하천, 대기, 소음 등 환경은 어떻게 바뀌었나요?"}
+];
+const SRCS=[{k:"aerial",n:"항공사진"},{k:"stat",n:"SGIS 통계"},{k:"extra",n:"추가 자료"}];
+const STAT_CATS=[{k:"pop",n:"인구"},{k:"land",n:"토지 이용"},{k:"ind",n:"산업 구조"},{k:"eco",n:"생태환경"}];
+const statOpts='<option value="">선택</option>'+STAT_CATS.map(c=>`<option value="${c.k}">${c.n}</option>`).join("");
+const statCatName=k=>(STAT_CATS.find(c=>c.k===k)||{n:""}).n;
+const OBS=[
+  {k:"house",t:"주거·건물",h:"아파트, 주택, 건물 밀도"},
+  {k:"road",t:"도로·교통",h:"도로 폭, 철도, 주차장"},
+  {k:"farm",t:"녹지·공원",h:"산, 공원, 하천변 녹지"},
+  {k:"water",t:"하천·수계",h:"하천, 저수지, 제방"},
+  {k:"facility",t:"상업·공공시설",h:"상가, 학교, 공장"}
+];
+const STAT_ROWS=4;
+const AI_CHECKS=["내가 입력한 수치와 시각 자료의 수치가 같다","제목, 축 이름, 단위가 표시되어 있다","자료 출처가 표시되어 있다","자료의 성격에 맞는 그래프 종류다","AI가 지어낸 수치나 내용이 없다"];
+const OBJ_CHECKS=["서로 다른 종류의 자료 두 가지 이상으로 확인했다","근거 자료의 출처가 분명하다","수치나 관찰 사실 같은 구체적인 근거가 있다","사실과 의견(주장)을 구분했다"];
+const COLORS=["#c2412d","#2c6e9b","#4f7f4e"];
+const areaOpts=sel=>'<option value="">선택</option>'+AREAS.map(a=>`<option value="${a.k}">${a.n}</option>`).join("")+(sel?'<option value="etc">기타</option>':"");
+const areaName=k=>(AREAS.find(a=>a.k===k)||{n:k==="etc"?"기타":""}).n;
+const srcOpts='<option value="">자료 종류</option>'+SRCS.map(s=>`<option value="${s.k}">${s.n}</option>`).join("")+'<option value="etc">기타</option>';
+const srcName=k=>(SRCS.find(s=>s.k===k)||{n:k==="etc"?"기타":""}).n;
+
+let state={fields:{},evidence:{},lists:{extra:[],prob:[]}};
+let dirty=false;
+
+/* ---------------- 고정 구조 생성 ---------------- */
+/* ---------------- 반복 항목 템플릿 ---------------- */
+const TPL={
+  extra:id=>`<div class="item-head"><h4>추가 자료 <span class="no"></span></h4><button type="button" class="rm-item" data-rmitem>이 자료 삭제</button></div>
+    <div class="grid2">
+      <label class="fld span2"><span>자료 제목</span><input type="text" data-key="extra-${id}-title" placeholder="예: 신촌 연세로 대중교통전용지구 관련 기사"></label>
+      <label class="fld"><span>자료 종류</span><select data-key="extra-${id}-kind"><option value="">자료 종류를 고르세요</option><option>국가통계포털(KOSIS)</option><option>뉴스 기사</option><option>설문조사</option><option>현장 사진</option><option>인터뷰</option><option>옛 지도</option><option>구청 보도자료</option><option value="기타">기타(직접 쓰기)</option></select></label>
+      <label class="fld" data-kindetc="${id}" hidden><span>기타 자료 종류</span><input type="text" data-key="extra-${id}-kindEtc" data-opt="1" placeholder="예: 부동산 실거래가, 버스 노선도"></label>
+      <label class="fld"><span>출처 링크 <em>선택</em></span><input type="url" data-key="extra-${id}-url" data-opt="1" placeholder="https://"></label>
+    </div>
+    <div class="evidence" data-ev="extra-${id}" data-nosrc="1" data-title="자료 파일" data-guide="자료를 캡처하거나 파일로 올리고, 이 자료가 무엇을 보여 주는지 적으세요."></div>
+    <div class="panel pattern" style="margin:14px 0 0;padding:16px 18px">
+      <label class="fld" style="margin:0"><span>이 자료로 본 변화 양상</span><textarea data-key="extra-${id}-pattern" rows="3" maxlength="600" placeholder="이 자료에서 확인한 우리 동의 변화를 적어요."></textarea></label>
+    </div>`,
+  prob:id=>`<div class="item-head"><h4>양상 <span class="no"></span></h4><button type="button" class="rm-item" data-rmitem>이 항목 삭제</button></div>
+    <div class="cause-flow">
+      <label class="fld"><span>어떤 공간 변화가 있었나요?</span><textarea data-key="prob-${id}-cause" rows="3" maxlength="400" placeholder="예: 큰길가의 단독 주택이 상가와 오피스텔로 바뀌었다(토지 이용의 변화)."></textarea></label>
+      <div class="cf-arrow" aria-hidden="true">→</div>
+      <label class="fld"><span>그 변화가 초래한 양상</span><textarea data-key="prob-${id}-title" rows="3" maxlength="400" placeholder="예: 유동 인구가 늘고, 카페·음식점이 모인 새로운 상권이 생겼다."></textarea></label>
+    </div>
+    <label class="fld"><span>근거 <em>자료를 들어 적어요</em></span><textarea data-key="prob-${id}-evid" rows="3" maxlength="900" placeholder="예: SGIS 통계주제도에서 숙박·음식점업 사업체 수가 2010년보다 61% 늘었다."></textarea></label>
+    <div class="refbox" style="margin-bottom:0">
+      <p class="hint" style="margin:0 0 8px"><b>근거 자료 선택</b> 앞에서 만든 그래프를 고르면 아래에 그대로 나타나요.</p>
+      <div class="checks" style="margin:0" data-refpicks="${id}"></div>
+      <div class="ref-show" data-refshow="${id}"></div>
+    </div>`
+};
+const KINDS=["국가통계포털(KOSIS)", "뉴스 기사", "설문조사", "현장 사진", "인터뷰", "옛 지도", "구청 보도자료"];
+const kindLabel=id=>{const k=state.fields[`extra-${id}-kind`];return k==="기타"?("기타"+(has(state.fields[`extra-${id}-kindEtc`])?" · "+state.fields[`extra-${id}-kindEtc`]:"")):(k||"")};
+function syncKindEtc(id){const w=$(`[data-kindetc="${id}"]`);if(w)w.hidden=state.fields[`extra-${id}-kind`]!=="기타"}
+const LIST_CFG={prob:{box:"#probList",max:2,min:1,label:"양상"}};
+
+function renderItem(type,id){
+  const el=document.createElement("div");
+  el.className="item";el.dataset.item=type;el.dataset.id=id;
+  el.innerHTML=TPL[type](id);
+  if(type==="extra"){const k=state.fields[`extra-${id}-kind`];if(has(k)&&k!=="기타"&&!KINDS.includes(k)){state.fields[`extra-${id}-kindEtc`]=k;state.fields[`extra-${id}-kind`]="기타"}}
+  $(LIST_CFG[type].box).appendChild(el);
+  setupEvidence(el);bindFields(el);fillFields(el);
+  $$("[data-ev]",el).forEach(e=>renderThumbs(e.dataset.ev));
+  $("[data-rmitem]",el)&&$$("[data-rmitem]",el).forEach(b=>b.addEventListener("click",()=>removeItem(type,id)));
+  renumber(type);
+  if(type==="prob")renderRefs(id);
+  if(type==="extra")syncKindEtc(id);
+  return el;
+}
+function addItem(type){
+  const cfg=LIST_CFG[type];
+  if(state.lists[type].length>=cfg.max){toast(cfg.label+"은(는) 최대 "+cfg.max+"개까지 추가할 수 있어요.");return}
+  const id=uid();state.lists[type].push(id);
+  const el=renderItem(type,id);changed();
+  const first=$("input,textarea",el);if(first)first.focus();
+}
+function removeItem(type,id){
+  if(state.lists[type].length<=LIST_CFG[type].min){toast("마지막 "+LIST_CFG[type].label+"은(는) 삭제할 수 없어요. 내용을 지우고 다시 작성하세요.");return}
+  if(!confirm(LIST_CFG[type].label+"을(를) 삭제할까요? 입력한 내용과 올린 자료가 함께 사라집니다."))return;
+  state.lists[type]=state.lists[type].filter(x=>x!==id);
+  const pre=type+"-"+id+"-";
+  Object.keys(state.fields).forEach(k=>{if(k.indexOf(pre)===0)delete state.fields[k]});
+  delete state.evidence[type+"-"+id];
+  const el=$(`[data-item="${type}"][data-id="${id}"]`);if(el)el.remove();
+  renumber(type);changed();
+}
+function renumber(type){$$(`[data-item="${type}"]`).forEach((el,i)=>{const n=$(".no",el);if(n)n.textContent=i+1});if(type==="extra")$("#extraEmpty").hidden=state.lists.extra.length>0}
+$$("[data-add]").forEach(b=>b.addEventListener("click",()=>addItem(b.dataset.add)));
+function renderAllLists(){
+  Object.keys(LIST_CFG).forEach(t=>{
+    $(LIST_CFG[t].box).innerHTML="";
+    if(!state.lists[t])state.lists[t]=[];
+    if(!state.lists[t].length&&LIST_CFG[t].min)state.lists[t]=[uid()];
+    state.lists[t].forEach(id=>renderItem(t,id));
+    renumber(t);
+  });
+}
+
+/* ---------------- 근거 자료 블록 ---------------- */
+function setupEvidence(root){
+  $$(".evidence:not([data-ready])",root).forEach(el=>{
+    el.dataset.ready=1;const id=el.dataset.ev;
+    el.innerHTML=`<div class="ev-head"><span class="ev-tag">근거 자료</span><h4>${el.dataset.title}</h4></div>
+      <p class="ev-guide">${el.dataset.guide}</p>
+      <label class="drop"><input type="file" accept="image/*,.pdf,application/pdf" multiple hidden><span class="ico">+</span><span><b>파일 선택</b> 또는 여기로 끌어다 놓기<small>이미지(JPG, PNG) 또는 PDF, 파일당 8MB 이하</small></span></label>
+      <div class="thumbs" data-thumbs="${id}"></div>
+      <div class="ev-fields">${el.dataset.nosrc?"":`<label class="fld"><span>출처</span><input type="text" data-key="${id}-src" placeholder="예: KOSIS 주민등록인구현황(2024) / 국토정보플랫폼 2005년 항공사진"></label>`}
+      <label class="fld" style="margin-bottom:0"><span>설명 <em class="cnt" data-for="${id}-desc"></em></span><textarea data-key="${id}-desc"${el.dataset.opt?' data-opt="1"':""} rows="3" maxlength="500" placeholder="이 자료가 무엇을 보여 주는지, 내 설명을 어떻게 뒷받침하는지 2~3문장으로 적어요."></textarea></label></div>`;
+    const input=$("input[type=file]",el),drop=$(".drop",el);
+    input.addEventListener("change",()=>{addFiles(id,input.files);input.value=""});
+    ["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
+    ["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
+    drop.addEventListener("drop",e=>{if(e.dataTransfer&&e.dataTransfer.files)addFiles(id,e.dataTransfer.files)});
+  });
+}
+const readAsDataURL=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
+function compressImage(d){
+  return new Promise(res=>{const img=new Image();
+    img.onload=()=>{const s=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight));
+      const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);
+      const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+      try{res(c.toDataURL("image/jpeg",.85))}catch(e){res(d)}};
+    img.onerror=()=>res(d);img.src=d;});
+}
+function addFiles(id,files){
+  const jobs=Array.from(files).map(f=>{
+    if(f.size>8*1024*1024){toast(f.name+" 파일이 8MB보다 커서 올리지 않았어요.");return null}
+    const isImg=/^image\//.test(f.type),isPdf=f.type==="application/pdf"||/\.pdf$/i.test(f.name);
+    if(!isImg&&!isPdf){toast(f.name+" 파일은 이미지나 PDF가 아니어서 올리지 않았어요.");return null}
+    return readAsDataURL(f).then(d=>(isImg&&!/svg/.test(f.type)?compressImage(d):d)).then(data=>({name:f.name,type:isImg?"image":"pdf",data}));
+  });
+  Promise.all(jobs).then(items=>{items=items.filter(Boolean);if(!items.length)return;
+    if($(`[data-slot="${id}"]`)){items=items.filter(x=>x.type==="image").slice(0,1);if(!items.length){toast("항공사진 칸에는 이미지 파일만 올릴 수 있어요.");return}state.evidence[id]=items}else state.evidence[id]=(state.evidence[id]||[]).concat(items);renderThumbs(id);changed();toast(items.length+"개 자료를 올렸어요.");
+  }).catch(()=>toast("파일을 읽지 못했어요. 다른 파일로 다시 시도하세요."));
+}
+function renderThumbs(id){
+  if($(`[data-slot="${id}"]`))return renderSlot(id);
+  const box=$(`[data-thumbs="${id}"]`);if(!box)return;
+  const arr=state.evidence[id]||[];
+  box.innerHTML=arr.map((f,i)=>`<div class="thumb">${f.type==="image"?`<img src="${f.data}" alt="${esc(f.name)}" data-zoom>`:'<div class="pdf">PDF</div>'}<div class="nm" title="${esc(f.name)}">${esc(f.name)}</div><button type="button" class="rm" data-rm="${i}" aria-label="${esc(f.name)} 삭제">×</button></div>`).join("");
+  $$("[data-rm]",box).forEach(b=>b.addEventListener("click",()=>{arr.splice(+b.dataset.rm,1);renderThumbs(id);changed()}));
+  $$("[data-zoom]",box).forEach(im=>im.addEventListener("click",()=>{const lb=$("#lightbox");$("img",lb).src=im.src;lb.classList.add("open")}));
+}
+$("#lightbox").addEventListener("click",function(){this.classList.remove("open")});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#lightbox").classList.remove("open")});
+
+/* ---------------- 항공사진 좌우 배치 ---------------- */
+const firstImg=id=>{const a=(state.evidence[id]||[]).filter(f=>f.type==="image");return a.length?a[0].data:null};
+const zoom=src=>{const lb=$("#lightbox");$("img",lb).src=src;lb.classList.add("open")};
+function renderSlot(id){
+  const slot=$(`[data-slot="${id}"]`);if(!slot)return;
+  const img=firstImg(id);
+  slot.innerHTML=img?`<figure class="photo"><img src="${img}" alt="${id==="ap-past"?"과거":"현재"} 항공사진"><div class="photo-actions"><label class="btn btn-ghost btn-sm" style="cursor:pointer">사진 바꾸기<input type="file" accept="image/*" hidden></label><button type="button" class="btn btn-ghost btn-sm" data-clear>삭제</button></div></figure>`
+    :`<label class="drop"><input type="file" accept="image/*" hidden><span class="ico">+</span><span><b>사진 올리기</b><small>파일 선택 또는 여기로 끌어다 놓기</small></span></label>`;
+  const input=$("input[type=file]",slot);input.addEventListener("change",()=>{addFiles(id,input.files);input.value=""});
+  const im=$("img",slot);if(im)im.addEventListener("click",()=>zoom(im.src));
+  const clr=$("[data-clear]",slot);if(clr)clr.addEventListener("click",()=>{state.evidence[id]=[];renderSlot(id);changed()});
+  if(!slot.dataset.dnd){slot.dataset.dnd=1;
+    slot.addEventListener("dragover",e=>{e.preventDefault();const d=$(".drop",slot);if(d)d.classList.add("over")});
+    slot.addEventListener("dragleave",()=>{const d=$(".drop",slot);if(d)d.classList.remove("over")});
+    slot.addEventListener("drop",e=>{e.preventDefault();if(e.dataTransfer&&e.dataTransfer.files)addFiles(id,e.dataTransfer.files)});}
+  renderViz();
+}
+
+/* ---------------- 입력값 ---------------- */
+function bindFields(root){
+  $$("[data-key]",root).forEach(el=>{
+    if(el.dataset.bound)return;el.dataset.bound=1;
+    const ev=(el.type==="checkbox"||el.tagName==="SELECT")?"change":"input";
+    el.addEventListener(ev,()=>{state.fields[el.dataset.key]=el.type==="checkbox"?el.checked:el.value;changed(el.dataset.key)});
+  });
+}
+function fillFields(root){
+  $$("[data-key]",root).forEach(el=>{
+    const v=state.fields[el.dataset.key];
+    if(el.type==="checkbox")el.checked=!!v;
+    else if(el.tagName==="SELECT")el.value=v||el.options[0].value;
+    else el.value=v==null?"":v;
+  });
+}
+const num=v=>{const n=parseFloat(String(v==null?"":v).replace(/,/g,"").trim());return isFinite(n)?n:null};
+function rateOf(b){const a=num(state.fields[b+"-v0"]),c=num(state.fields[b+"-v1"]);if(a===null||c===null||a===0)return null;return (c-a)/Math.abs(a)*100}
+const rateTxt=r=>r===null?"–":(r>0?"+":"")+r.toFixed(1)+"%";
+const regionName=()=>state.fields["s0-dong"]?"서울특별시 서대문구 "+state.fields["s0-dong"]:"";
+function statRows(){
+  const f=state.fields,out=[];
+  for(let i=0;i<STAT_ROWS;i++){const b="st-"+i;if(!(f[b+"-name"]||f[b+"-v0"]||f[b+"-v1"]))continue;
+    const name=String(f[b+"-name"]||((STAT_CATS[i]||{}).n||"")+" 지표"),um=name.match(/\(([^)]+)\)\s*$/);
+    const mid=String(f[b+"-mid"]||"").split(/[,，]/).map(x=>x.split(/[:=]/).map(y=>y.trim())).filter(q=>q.length===2&&q[0]&&num(q[1])!==null).map(q=>({y:q[0].replace(/년$/,""),v:num(q[1])}));
+    let pts=[{y:String(f[b+"-y0"]||"과거"),v:num(f[b+"-v0"])},...mid,{y:String(f[b+"-y1"]||"현재"),v:num(f[b+"-v1"])}].filter(q=>q.v!==null);
+    if(pts.every(q=>isFinite(parseFloat(q.y))))pts.sort((a,c)=>parseFloat(a.y)-parseFloat(c.y));
+    out.push({b,area:(STAT_CATS[i]||{}).k||"",name,unit:um?um[1]:"",y0:f[b+"-y0"]||"",v0:f[b+"-v0"]||"",y1:f[b+"-y1"]||"",v1:f[b+"-v1"]||"",mid,pts,rate:rateOf(b)});}
+  return out;
+}
+const isYear=y=>isFinite(parseFloat(y));
+const fmtN=v=>Number(v).toLocaleString("ko-KR",{maximumFractionDigits:2});
+const statLine=r=>`${r.name}: `+r.pts.map(q=>`${q.y}${isYear(q.y)?"년":""} ${fmtN(q.v)}`).join(" → ")+(r.rate!==null?`, 변화율 ${rateTxt(r.rate)}`:"");
+function updateDerived(){
+  $$("[data-rate]").forEach(el=>{const r=rateOf(el.dataset.rate);el.className="rate"+(r===null?"":r>0?" up":r<0?" down":"");el.textContent=rateTxt(r)});
+  $$(".cnt[data-for]").forEach(el=>{const t=$(`[data-key="${el.dataset.for}"]`);el.textContent=String(state.fields[el.dataset.for]||"").length+" / "+(t?t.maxLength:"")+"자"});
+    $$("[data-score]").forEach(el=>{const p=el.dataset.score,n=p==="ai"?AI_CHECKS.length:OBJ_CHECKS.length;let c=0;
+    for(let i=0;i<n;i++)if(state.fields[p+"-chk"+i])c++;
+    el.textContent=(p==="ai"?"검증 ":"객관성 ")+c+" / "+n;el.classList.toggle("ok",c===n)});
+  $$(".tabs").forEach(t=>$$("button",t).forEach(b=>{
+    const panel=$(`.tabpanel[data-group="${t.dataset.group}"][data-panel="${b.dataset.tab}"]`);
+    b.classList.toggle("filled",!!panel&&sectionScore(panel).done>0);
+  }));
+  $("#regionChip").textContent=state.fields["s0-dong"]||"조사할 동 미정";
+  updateTitles();
+}
+function changed(key){
+  dirty=true;const st=$("#status");st.textContent="저장하지 않은 변경 내용이 있어요";st.classList.add("dirty");
+  updateDerived();updateProgress();
+  if(!key||/^(st-|cat-|an-)/.test(key))renderViz();
+  $$("[data-numbox]").forEach(d=>{const i=d.dataset.numbox;if(!d.open&&["name","v0","v1"].some(x=>has(state.fields[`st-${i}-${x}`])))d.open=true});
+  const rm=key&&key.match(/^prob-([^-]+)-ref-/);if(rm)renderRefShow(rm[1]);
+  const km=key&&key.match(/^extra-([^-]+)-kind$/);if(km)syncKindEtc(km[1]);
+}
+
+/* ---------------- 탭 ---------------- */
+$$(".tabs").forEach(t=>$$("button",t).forEach(b=>b.addEventListener("click",()=>{
+  $$("button",t).forEach(x=>x.setAttribute("aria-selected",x===b));
+  $$(`.tabpanel[data-group="${t.dataset.group}"]`).forEach(p=>p.classList.toggle("active",p.dataset.panel===b.dataset.tab));
+})));
+
+/* ---------------- 단계 이동·진행률 ---------------- */
+const steps=$$(".step");
+$("#routeList").innerHTML=steps.map((s,i)=>`<li data-i="${i}"><button type="button"><span class="pin">${s.dataset.pin}</span><span class="lbl"><b>${s.dataset.title}</b><small>${s.dataset.desc}</small><span class="bar"><i></i></span></span></button></li>`).join("");
+$$("#routeList li").forEach(li=>$("button",li).addEventListener("click",()=>go(+li.dataset.i)));
+$$("[data-go]").forEach(b=>b.addEventListener("click",()=>go(+b.dataset.go)));
+const LAST=steps.length-1;
+function go(i){
+  steps.forEach((s,j)=>s.classList.toggle("active",j===i));
+  $$("#routeList li").forEach((li,j)=>li.classList.toggle("active",j===i));
+  if(i===LAST){buildPreview();buildCheckList();$("#pdfNameView").textContent=pdfName()}
+  if($("#vizArea",steps[i]))renderViz();
+  if($("#probList",steps[i]))renderAllRefs();
+  try{history.replaceState(null,"","#step"+i)}catch(e){}
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function sectionScore(sec){
+  const keys=$$("[data-key]",sec).filter(el=>el.type!=="checkbox"&&!el.dataset.opt).map(el=>el.dataset.key);
+  const evs=$$(".evidence:not([data-opt]),[data-slot]",sec).map(el=>el.dataset.ev||el.dataset.slot);
+  let done=0;keys.forEach(k=>{if(String(state.fields[k]||"").trim())done++});
+  evs.forEach(e=>{if((state.evidence[e]||[]).length)done++});
+  return {done,total:keys.length+evs.length};
+}
+function stepProgress(i){const s=sectionScore(steps[i]);return s.total?s.done/s.total:0}
+function updateProgress(){
+  $$("#routeList li").forEach((li,i)=>{const bar=$(".bar",li);
+    if(i===LAST){bar.style.display="none";return}
+    const p=stepProgress(i);$("i",bar).style.width=Math.round(p*100)+"%";li.classList.toggle("done",p>=.999)});
+}
+function buildCheckList(){$("#checkList").innerHTML=steps.slice(0,LAST).map((s,i)=>`<li><span>${s.dataset.title}</span><span>${Math.round(stepProgress(i)*100)}%</span></li>`).join("")}
+
+/* ---------------- 프롬프트 ---------------- */
+
+/* ---------------- 자동 시각화 ---------------- */
+const C_PAST="#a87a35",C_NOW="#2c6e9b",C_UP="#c2412d",C_DOWN="#2c6e9b",C_LINE="#4f7f4e";
+const VFONT="'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
+const short=(t,n)=>{t=String(t);return t.length>n?t.slice(0,n-1)+"…":t};
+function niceNum(x,round){const e=Math.floor(Math.log10(x)),f=x/Math.pow(10,e);const nf=round?(f<1.5?1:f<3?2:f<7?5:10):(f<=1?1:f<=2?2:f<=5?5:10);return nf*Math.pow(10,e)}
+function fmt(v){const a=Math.abs(v);if(a>=1e8)return (v/1e8).toFixed(a>=1e9?0:1)+"억";if(a>=1e4)return (v/1e4).toFixed(a>=1e5?0:1)+"만";return String(Math.round(v*100)/100)}
+function niceScale(min,max,t){if(max===min){max=min+(Math.abs(min)||1)}const step=niceNum(niceNum(max-min,false)/(t||4),true);return {lo:Math.floor(min/step)*step,hi:Math.ceil(max/step)*step,step}}
+const svgOpen=(w,h,label)=>`<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="${esc(label)}" xmlns="http://www.w3.org/2000/svg" style="font-family:${VFONT};display:block;max-width:${w}px;margin:0 auto">`;
+function yAxis(sc,L,R,T,ph,W,unit){let o="";const Y=v=>T+ph-(v-sc.lo)/(sc.hi-sc.lo)*ph;
+  for(let k=0,v=sc.lo;v<=sc.hi+sc.step/2&&k<20;k++,v=sc.lo+k*sc.step){const y=Y(v).toFixed(1);o+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="#e3e8e4"/><text x="${L-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#5d6b75">${fmt(v)}</text>`}
+  if(unit)o+=`<text x="4" y="14" text-anchor="start" font-size="11" fill="#5d6b75">단위: ${esc(unit)}</text>`;return o}
+function barSVG(labels,series,unit,label){
+  const W=520,H=290,L=62,R=16,T=40,B=40,pw=W-L-R,ph=H-T-B;
+  const all=series.flatMap(x=>x.vals).filter(v=>v!=null);
+  const sc=niceScale(Math.min(0,...all),Math.max(0,...all)),Y=v=>T+ph-(v-sc.lo)/(sc.hi-sc.lo)*ph;
+  let o=svgOpen(W,H,label)+yAxis(sc,L,R,T,ph,W,unit);
+  const n=labels.length,slot=pw/n,g=Math.min(slot*.72,series.length>1?160:110),bw=g/series.length;
+  series.forEach((se,si)=>se.vals.forEach((v,i)=>{if(v==null)return;
+    const x=L+slot*(i+.5)-g/2+bw*si,y0=Y(0),y1=Y(v),col=se.colors?se.colors[i]:se.color;
+    o+=`<rect x="${(x+3).toFixed(1)}" y="${Math.min(y0,y1).toFixed(1)}" width="${Math.max(2,bw-6).toFixed(1)}" height="${Math.max(1,Math.abs(y0-y1)).toFixed(1)}" rx="2" fill="${col}"/>`+
+       `<text x="${(x+bw/2).toFixed(1)}" y="${(v>=0?y1-6:y1+14).toFixed(1)}" text-anchor="middle" font-size="${series.length>1?10.5:12}" font-weight="600" fill="${col}">${fmtN(v)}</text>`}));
+  o+=`<line x1="${L}" x2="${W-R}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#1b2b3a"/>`;
+  labels.forEach((l,i)=>o+=`<text x="${(L+slot*(i+.5)).toFixed(1)}" y="${H-B+18}" text-anchor="middle" font-size="12" fill="#1b2b3a">${esc(short(l,n>3?9:16))}</text>`);
+  if(series.length>1){let lx=W-R;[...series].reverse().forEach(se=>{lx-=se.name.length*13+26;o+=`<rect x="${lx}" y="6" width="11" height="11" rx="2" fill="${se.color}"/><text x="${lx+16}" y="16" font-size="12" fill="#1b2b3a">${esc(se.name)}</text>`})}
+  return o+"</svg>";
+}
+function lineSVG(pts,unit,label){
+  const W=520,H=290,L=62,R=28,T=40,B=40,pw=W-L-R,ph=H-T-B;
+  const vs=pts.map(q=>q.v),sc=niceScale(Math.min(...vs),Math.max(...vs)),Y=v=>T+ph-(v-sc.lo)/(sc.hi-sc.lo)*ph;
+  const numeric=pts.every(q=>isYear(q.y)),xs=numeric?pts.map(q=>parseFloat(q.y)):pts.map((_,i)=>i);
+  const x0=Math.min(...xs),x1=Math.max(...xs),X=x=>x1===x0?L+pw/2:L+14+(x-x0)/(x1-x0)*(pw-28);
+  let o=svgOpen(W,H,label)+yAxis(sc,L,R,T,ph,W,unit);
+  o+=`<path d="${pts.map((q,i)=>(i?"L":"M")+X(xs[i]).toFixed(1)+" "+Y(q.v).toFixed(1)).join(" ")}" fill="none" stroke="${C_LINE}" stroke-width="2.6" stroke-linejoin="round"/>`;
+  pts.forEach((q,i)=>{const x=X(xs[i]).toFixed(1),y=Y(q.v).toFixed(1);
+    o+=`<circle cx="${x}" cy="${y}" r="4.5" fill="#fff" stroke="${C_LINE}" stroke-width="2.4"/><text x="${x}" y="${(+y-10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="${C_LINE}">${fmtN(q.v)}</text><text x="${x}" y="${H-B+18}" text-anchor="middle" font-size="12" fill="#1b2b3a">${esc(short(q.y,8))}</text>`});
+  return o+"</svg>";
+}
+function rateSVG(rows){
+  const rowH=34,T=10,B=30,W=620,L=200,R=80,pw=W-L-R,H=T+rows.length*rowH+B;
+  const rs=rows.map(r=>r.rate),sc=niceScale(Math.min(0,...rs),Math.max(0,...rs),4),X=v=>L+(v-sc.lo)/(sc.hi-sc.lo)*pw;
+  let o=svgOpen(W,H,"지표별 변화율 비교");
+  for(let k=0,v=sc.lo;v<=sc.hi+sc.step/2&&k<20;k++,v=sc.lo+k*sc.step){const x=X(v).toFixed(1);o+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="#e3e8e4"/><text x="${x}" y="${H-B+16}" text-anchor="middle" font-size="11" fill="#5d6b75">${Math.round(v*10)/10}%</text>`}
+  rows.forEach((r,i)=>{const y=T+i*rowH+7,x0=X(0),x1=X(r.rate),col=r.rate>=0?C_UP:C_DOWN;
+    o+=`<text x="${L-10}" y="${y+14}" text-anchor="end" font-size="12.5" fill="#1b2b3a">${esc(short(r.name,15))}</text><rect x="${Math.min(x0,x1).toFixed(1)}" y="${y}" width="${Math.max(1.5,Math.abs(x1-x0)).toFixed(1)}" height="20" rx="2" fill="${col}"/><text x="${(r.rate>=0?Math.max(x0,x1)+6:x0+6).toFixed(1)}" y="${y+14}" text-anchor="start" font-size="12" font-weight="700" fill="${col}">${rateTxt(r.rate)}</text>`});
+  const z=X(0).toFixed(1);o+=`<line x1="${z}" x2="${z}" y1="${T}" y2="${H-B}" stroke="#1b2b3a"/>`;
+  return o+"</svg>";
+}
+function vcard(title,type,why,body,key,ui,wide){
+  const note=ui?`<label class="fld vnote"><span>이 자료에서 읽은 점</span><textarea data-key="${esc(key)}" data-opt="1" rows="2" maxlength="300" placeholder="가장 눈에 띄는 변화나 특징을 한두 문장으로 적어요."></textarea></label>`
+    :(String(state.fields[key]||"").trim()?`<p class="vread"><b>읽은 점</b> ${br(state.fields[key])}</p>`:"");
+  return `<div class="vcard${wide?" wide":""}"><div class="vhead"><h4>${esc(title)}</h4><span class="vtype">${type}</span></div><p class="vwhy">${why}</p>${body}${note}</div>`;
+}
+function vizCards(ui){
+  const f=state.fields,rows=statRows();let h="";
+  const pp=firstImg("ap-past"),pn=firstImg("ap-now");
+  if(pp||pn)h+=vcard("항공사진 비교"+(f["ap-y0"]||f["ap-y1"]?` (${esc(f["ap-y0"]||"?")}년 · ${esc(f["ap-y1"]||"?")}년)`:""),"사진 비교","공간의 모습은 같은 범위의 두 사진을 나란히 놓고 보면 변화가 잘 드러나요.",
+    `<div class="vphotos">${[[pp,"과거",f["ap-y0"]],[pn,"현재",f["ap-y1"]]].map(([src,l,y])=>`<figure>${src?`<img src="${src}" alt="${l} 항공사진" data-vzoom>`:'<div class="vnone">사진 없음</div>'}<figcaption>${l}${y?" "+esc(y)+"년":""}</figcaption></figure>`).join("")}</div>`,"viz-note-photo",ui,true);
+  const rated=rows.filter(r=>r.rate!==null);
+  if(rated.length>=2)h+=vcard("지표별 변화율 비교","막대그래프(변화율)","단위가 서로 다른 지표도 변화율(%)로 바꾸면 한 그래프에서 변화의 크기와 방향을 비교할 수 있어요. 빨간색은 증가, 파란색은 감소입니다.",rateSVG(rated),"viz-note-rate",ui,true);
+  const groups={};rows.filter(r=>r.unit&&num(r.v0)!==null&&num(r.v1)!==null).forEach(r=>(groups[r.unit]=groups[r.unit]||[]).push(r));
+  Object.keys(groups).filter(u=>groups[u].length>=2).forEach(u=>{const g=groups[u];
+    h+=vcard(`같은 단위 지표 함께 보기 (${u})`,"묶은 막대그래프","단위가 같은 지표는 한 그래프에 묶으면 과거와 현재의 크기를 함께 비교할 수 있어요.",
+      barSVG(g.map(r=>r.name.replace(/\s*\([^)]*\)\s*$/,"")),[{name:"과거",color:C_PAST,vals:g.map(r=>num(r.v0))},{name:"현재",color:C_NOW,vals:g.map(r=>num(r.v1))}],u,"같은 단위 지표 비교"),"viz-note-u-"+u,ui,true)});
+  rows.forEach(r=>{
+    if(r.pts.length>=3)h+=vcard(r.name,"꺾은선그래프","여러 시점의 값이 있어 시간에 따른 흐름(증가·감소 추세)을 보여 주기 좋은 꺾은선그래프로 그렸어요.",lineSVG(r.pts,r.unit,r.name),"viz-note-"+r.b,ui,false);
+    else if(r.pts.length===2)h+=vcard(r.name,"막대그래프",`두 시점의 크기를 비교하므로 막대그래프로 그렸어요.${r.rate!==null?" 변화율 "+rateTxt(r.rate)+".":""}`,
+      barSVG(r.pts.map(q=>q.y+(isYear(q.y)?"년":"")),[{name:r.name,colors:[C_PAST,C_NOW],vals:r.pts.map(q=>q.v)}],r.unit,r.name),"viz-note-"+r.b,ui,false);
+  });
+  return h;
+}
+function statTable(){
+  const rows=statRows();if(!rows.length)return '<p class="empty-note" style="margin:0">1단계 SGIS 통계 기록표가 아직 비어 있어요.</p>';
+  return `<div class="tbl-wrap"><table class="grid mirror" style="min-width:640px"><thead><tr><th>분류</th><th>지표(단위)</th><th>과거</th><th>중간 연도</th><th>현재</th><th>변화율</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(statCatName(r.area)||"-")}</td><td>${esc(r.name)}</td><td>${r.v0?esc(r.v0):"-"}${r.y0?` <small>(${esc(r.y0)}년)</small>`:""}</td><td>${r.mid.length?r.mid.map(q=>esc(q.y)+"년 "+fmtN(q.v)).join(", "):"-"}</td><td>${r.v1?esc(r.v1):"-"}${r.y1?` <small>(${esc(r.y1)}년)</small>`:""}</td><td><span class="rate ${r.rate>0?"up":r.rate<0?"down":""}">${rateTxt(r.rate)}</span></td></tr>`).join("")}</tbody></table></div>`;
+}
+function chgTable(){const f=state.fields,rows=statRows();
+  return `<table class="chg"><thead><tr><th>분야</th><th>과거 모습</th><th>현재 모습</th><th>변화 정리</th></tr></thead><tbody>${STAT_CATS.map((c,i)=>{const r=rows.find(x=>x.b==="st-"+i);
+    return `<tr><th>${c.n}${r&&r.rate!==null?`<br><span class="rate ${r.rate>0?"up":r.rate<0?"down":""}" style="font-size:12.5px">${esc(r.name)} ${rateTxt(r.rate)}</span>`:""}</th><td>${has(f[`cat-${c.k}-past`])?br(f[`cat-${c.k}-past`]):"-"}</td><td>${has(f[`cat-${c.k}-now`])?br(f[`cat-${c.k}-now`]):"-"}</td><td>${has(f["an-"+c.k])?br(f["an-"+c.k]):"-"}</td></tr>`}).join("")}</tbody></table>`}
+function renderViz(){
+  const ct=$("#chgTable");if(ct)ct.innerHTML=chgTable();
+  const box=$("#vizArea");if(!box)return;
+  const html=vizCards(false);
+  box.innerHTML=html||'<p class="empty-note" style="grid-column:1/-1;margin:0">1단계에서 ‘수치로 기록하기’에 지표를 적은 분야가 있으면 여기에 그래프가 그려져요. 수치가 없는 분야는 위 표로 비교하면 돼요.</p>';
+  bindFields(box);fillFields(box);
+  $$(".cnt[data-for]",box);
+  $$("[data-vzoom]",box).forEach(im=>im.addEventListener("click",()=>zoom(im.src)));
+}
+
+/* ---------------- 근거 자료 선택(앞에서 만든 사진·그래프) ---------------- */
+const rkey=t=>String(t).replace(/[^0-9A-Za-z가-힣]/g,"_");
+function chartFor(r){return r.pts.length>=3?lineSVG(r.pts,r.unit,r.name):barSVG(r.pts.map(q=>q.y+(isYear(q.y)?"년":"")),[{name:r.name,colors:[C_PAST,C_NOW],vals:r.pts.map(q=>q.v)}],r.unit,r.name)}
+function visualRefs(){
+  const f=state.fields,out=[],fig=(body,cap,w)=>`<figure class="rfig${w?" wide":""}">${body}<figcaption>${esc(cap)}</figcaption></figure>`;
+  [["ap-past","과거 항공사진","ap-y0"],["ap-now","현재 항공사진","ap-y1"]].forEach(([id,l,y])=>{const src=firstImg(id);
+    if(src){const cap=l+(has(f[y])?` (${f[y]}년)`:"");out.push({key:id,label:cap,html:fig(`<img src="${src}" alt="${esc(cap)}">`,cap)})}});
+  const rows=statRows(),rated=rows.filter(r=>r.rate!==null);
+  if(rated.length)out.push({key:"rate",label:"지표별 변화율 그래프",html:fig(rateSVG(rated),"지표별 변화율 비교",1)});
+  const groups={};rows.filter(r=>r.unit&&num(r.v0)!==null&&num(r.v1)!==null).forEach(r=>(groups[r.unit]=groups[r.unit]||[]).push(r));
+  Object.keys(groups).filter(u=>groups[u].length>=2).forEach(u=>{const g=groups[u];
+    out.push({key:"u-"+rkey(u),label:`같은 단위 묶음 그래프 (${u})`,html:fig(barSVG(g.map(r=>r.name.replace(/\s*\([^)]*\)\s*$/,"")),[{name:"과거",color:C_PAST,vals:g.map(r=>num(r.v0))},{name:"현재",color:C_NOW,vals:g.map(r=>num(r.v1))}],u,"같은 단위 지표 비교"),`같은 단위 지표 비교 (${u})`,1)})});
+  rows.filter(r=>r.pts.length>=2).forEach(r=>out.push({key:r.b,label:r.name+" 그래프",html:fig(chartFor(r),r.name)}));
+  state.lists.extra.forEach(id=>{const src=firstImg("extra-"+id),t=f[`extra-${id}-title`];if(src)out.push({key:"ex-"+id,label:"추가 자료: "+(t||"제목 없음"),html:fig(`<img src="${src}" alt="">`,t||"추가 자료")})});
+  return out;
+}
+function selectedRefs(id,refs){return (refs||visualRefs()).filter(r=>state.fields[`prob-${id}-ref-${r.key}`])}
+function renderRefShow(id){const box=$(`[data-refshow="${id}"]`);if(box)box.innerHTML=selectedRefs(id).map(r=>r.html).join("")}
+function renderRefs(id){
+  const pick=$(`[data-refpicks="${id}"]`);if(!pick)return;const refs=visualRefs();
+  pick.innerHTML=refs.length?refs.map(r=>`<label><input type="checkbox" data-key="prob-${id}-ref-${r.key}">${esc(r.label)}</label>`).join("")
+    :'<p class="hint" style="margin:0">1단계에서 분야별 지표를 입력하면 여기에서 그래프를 고를 수 있어요.</p>';
+  bindFields(pick);fillFields(pick);renderRefShow(id);
+}
+const renderAllRefs=()=>state.lists.prob.forEach(renderRefs);
+
+/* ---------------- 분류 선택(SGIS 분석) ---------------- */
+function insertBullet(key,text){const ta=$(`[data-key="${key}"]`);if(!ta)return;const cur=ta.value;
+  ta.value=cur+(cur&&!cur.endsWith("\n")?"\n":"")+"• "+text+": ";ta.dispatchEvent(new Event("input"));ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}
+function renderSgChips(){const box=$("#sgChips");if(!box)return;const rows=statRows();
+  const cats=STAT_CATS.filter(c=>rows.some(r=>r.area===c.k));
+  box.innerHTML=cats.length?cats.map(c=>`<button type="button" data-ins="${esc(c.n)}">${esc(c.n)}<small>${esc(rows.filter(r=>r.area===c.k).map(r=>r.name.replace(/\s*\([^)]*\)\s*$/,"")).join(", "))}</small></button>`).join("")
+    :'<p class="hint" style="margin:0">위 기록표에서 지표의 ‘분류’를 고르면 여기에 항목이 나타나요.</p>';}
+
+/* ---------------- 제목 ---------------- */
+const josa=(w,a,b)=>{const c=String(w).charCodeAt(String(w).length-1);return (c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?a:b};
+const dongName=()=>String(state.fields["s0-dong"]||"").trim();
+const titleText=()=>{const d=dongName();return d?`서울특별시 서대문구 ${d}${josa(d,"은","는")} 어떻게 달라졌을까?`:"서울특별시 서대문구는 어떻게 달라졌을까?"};
+function updateTitles(){const d=dongName();
+  $("#heroTitle").innerHTML=d?`<span class="place">서울특별시 서대문구</span><span class="dong">${esc(d)}</span>${josa(d,"은","는")}<br>어떻게 달라졌을까?`:`<span class="place">서울특별시</span>서대문구는<br>어떻게 달라졌을까?`;
+  const nm=t=>String(t).replace(/\s/g,""),nd=nm(d);let hit=null;
+  $$(".dong-shape").forEach(p=>{const on=!!nd&&(nm(p.dataset.dong)===nd||nm(p.dataset.dong)===nd+"동");p.classList.toggle("on",on);if(on)hit=p});
+  const pin=$("#dongPin");
+  if(hit){pin.removeAttribute("hidden");pin.setAttribute("transform",`translate(${hit.dataset.cx} ${hit.dataset.cy})`);$("text",pin).textContent=hit.dataset.dong}else pin.setAttribute("hidden","");
+  $("#topTitle").textContent=titleText();document.title=titleText()+" | 지역 조사 학습지"}
+
+/* ---------------- 보고서 ---------------- */
+const val=k=>{const v=state.fields[k];return v&&String(v).trim()?br(v):'<span class="empty">(작성하지 않음)</span>'};
+function evReport(id,title){
+  const arr=state.evidence[id]||[],src=state.fields[id+"-src"],desc=state.fields[id+"-desc"];
+  if(!arr.length&&!src&&!desc)return `<div class="ev"><b>${esc(title)}</b> <span class="empty">(근거 자료 없음)</span></div>`;
+  const imgs=arr.filter(f=>f.type==="image"),pdfs=arr.filter(f=>f.type!=="image");
+  return `<div class="ev"><b>${esc(title)}</b>`+(imgs.length?`<div class="imgs">${imgs.map(f=>`<figure><img src="${f.data}" alt="${esc(f.name)}"><figcaption>${esc(f.name)}</figcaption></figure>`).join("")}</div>`:"")+
+    (pdfs.length?`<p>첨부 PDF: ${pdfs.map(f=>esc(f.name)).join(", ")}</p>`:"")+(src?`<p class="src">출처: ${esc(src)}</p>`:"")+`<p>${desc?br(desc):'<span class="empty">(설명 없음)</span>'}</p></div>`;
+}
+const tags=(list)=>`<div class="tags">${list.map(([t,on])=>`<span class="${on?"":"no"}">${esc(t)}</span>`).join("")}</div>`;
+function buildReport(){
+  const f=state.fields,now=state.at?new Date(state.at):new Date();let h="";
+  h+=`<h1>${esc(titleText())}</h1><h3 style="margin:0 0 6px">생활 공간 변화 조사 보고서</h3>`;
+  h+=`<p class="meta">${[f["s0-members"]?"모둠원: "+esc(f["s0-members"]):"",`${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 작성`].filter(Boolean).join(" | ")}</p>`;
+  h+=`<h2>1단계 · 분야별 변화 조사</h2>`;
+  h+=chgTable();
+  STAT_CATS.forEach(c=>{if(has(f[`cat-${c.k}-src`]))h+=`<p class="src" style="color:#5d6b75;font-size:12.5px">${c.n} 확인 자료: ${esc(f[`cat-${c.k}-src`])}</p>`});
+  if(statRows().some(r=>r.pts.length))h+=`<h3>수치 자료</h3>`+statTable();
+
+  h+=`<h2 class="pb">2단계 · 분야별 변화 종합</h2>`;
+  const vc=vizCards(false);h+=vc||'<p class="empty">(시각화할 자료 없음)</p>';
+  h+=`<p><span class="k">분야별 변화 종합</span><br>${val("cmp-sum")}</p>`;
+  h+=`<h2 class="pb">3단계 · 공간 변화가 초래한 양상</h2>`;
+  state.lists.prob.forEach((id,i)=>{const p=`prob-${id}-`;
+    h+=`<div class="box"><b>양상 ${i+1}</b><table><tbody><tr><th style="width:150px">공간 변화</th><td>${val(p+"cause")}</td></tr><tr><th>초래한 양상</th><td>${val(p+"title")}</td></tr></tbody></table>
+      <p><span class="k">근거</span><br>${val(p+"evid")}</p>${(()=>{const sel=selectedRefs(id);return sel.length?`<div class="refs">${sel.map(r=>r.html).join("")}</div>`:""})()}</div>`});
+  h+=`<h2>오늘의 탐구 정리</h2><p>${val("s4-conclusion")}</p>`;
+  return h;
+}
+function buildPreview(){$("#preview").innerHTML=buildReport()}
+
+/* ---------------- 저장·불러오기 ---------------- */
+function dataURLtoBlob(d){const p=d.split(","),m=p[0].match(/:(.*?);/)[1],b=atob(p[1]);let n=b.length;const u=new Uint8Array(n);while(n--)u[n]=b.charCodeAt(n);return new Blob([u],{type:m})}
+function download(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name.replace(/[\\/:*?"<>|]/g,"_");document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+const baseName=()=>"서대문구조사_"+dongTag()+"_"+memberTag();
+function markSaved(){dirty=false;const st=$("#status"),t=new Date();st.textContent=t.getHours()+":"+String(t.getMinutes()).padStart(2,"0")+"에 작업 파일 저장함";st.classList.remove("dirty")}
+function saveJson(){
+  download(new Blob([JSON.stringify({app:"seodaemun-change-worksheet",version:4,savedAt:new Date().toISOString(),...state})],{type:"application/json"}),baseName()+".json");
+  markSaved();toast("작업 파일을 저장했어요. 다음 시간에 ‘작업 파일 불러오기’로 이어서 작성하세요.");
+}
+$("#quickSave").addEventListener("click",saveJson);
+$("#loadJson").addEventListener("change",function(){
+  const file=this.files[0];this.value="";if(!file)return;
+  file.text().then(t=>{
+    const d=JSON.parse(t);if(!d||d.app!=="seodaemun-change-worksheet"||typeof d.fields!=="object")throw 0;
+    if(dirty&&!confirm("지금 화면의 내용이 불러온 파일 내용으로 바뀝니다. 계속할까요?"))return;
+    state={fields:d.fields||{},evidence:d.evidence||{},lists:Object.assign({extra:[],prob:[]},d.lists||{})};
+    if(!has(state.fields["sg-analysis"])&&(has(state.fields["sg-pop"])||has(state.fields["sg-house"])))state.fields["sg-analysis"]=[state.fields["sg-pop"]&&"• 인구: "+state.fields["sg-pop"],state.fields["sg-house"]&&"• 주택·주거 환경: "+state.fields["sg-house"]].filter(Boolean).join("\n");
+    renderAllLists();fillFields(document);$$("[data-thumbs]").forEach(b=>renderThumbs(b.dataset.thumbs));$$("[data-slot]").forEach(b=>renderSlot(b.dataset.slot));
+    changed();markSaved();buildPreview();buildCheckList();toast("작업 파일을 불러왔어요.");
+  }).catch(()=>toast("이 파일은 이 학습지의 작업 파일(.json)이 아니어서 불러올 수 없어요."));
+});
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue=""}});
+let toastTimer;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),3000)}
+
+/* ---------------- PDF 저장 ---------------- */
+const has=v=>v!=null&&String(v).trim()!=="";
+const memberTag=()=>String(state.fields["s0-members"]||"").split(/[,，、\/]+/).map(x=>x.replace(/[\\/:*?"<>|_\s]/g,"")).filter(Boolean).join("·").slice(0,60)||"모둠원";
+const dongTag=()=>dongName().replace(/[\\/:*?"<>|_\s]/g,"")||"동미정";
+const pdfName=()=>`서대문구조사_${dongTag()}_${memberTag()}.pdf`;
+function setPdfStatus(t,ok){const el=$("#pdfStatus");el.hidden=!t;el.textContent=t||"";el.style.color=ok?"var(--veg)":"var(--road)"}
+async function makePdf(){
+  const W=760,host=document.createElement("div"),doc=document.createElement("div");
+  host.style.cssText="position:absolute;left:0;top:0;width:"+W+"px;z-index:-1;pointer-events:none";
+  doc.className="report";doc.style.cssText="width:"+W+"px;max-width:none;background:#fff;margin:0;padding:0";
+  doc.innerHTML=buildReport();host.appendChild(doc);document.body.appendChild(host);
+  $$("svg",doc).forEach(sv=>{const vb=(sv.getAttribute("viewBox")||"").trim().split(/\s+/).map(Number);
+    if(vb.length===4&&vb[2]>0){const w=Math.min(vb[2],W-40),h=w*vb[3]/vb[2];sv.setAttribute("width",w);sv.setAttribute("height",h);sv.style.width=w+"px";sv.style.height=h+"px";sv.style.maxWidth="none"}});
+  await Promise.all($$("img",doc).map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r})));
+  if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+  const sy=window.scrollY;window.scrollTo(0,0);
+  try{
+    const pdf=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
+    const PW=210,PH=297,M=12,CW=PW-2*M,BOT=PH-M-6,k=CW/W,SC=2;
+    let y=M;
+    const put=(cv,hmm)=>{pdf.addImage(cv.toDataURL("image/jpeg",.88),"JPEG",M,y,CW,hmm);y+=hmm};
+    for(const el of Array.from(doc.children)){
+      const cs=getComputedStyle(el),mt=(parseFloat(cs.marginTop)||0)*k,mb=(parseFloat(cs.marginBottom)||0)*k;
+      if(el.classList.contains("pb")&&y>M+1){pdf.addPage();y=M}
+      const cv=await window.html2canvas(el,{scale:SC,backgroundColor:"#ffffff",useCORS:true,logging:false,width:W,windowWidth:W,scrollX:0,scrollY:0});
+      const hmm=cv.height/SC*k;
+      if(y>M+1)y+=mt;
+      if(/^H[1-4]$/.test(el.tagName)&&y+hmm+25>BOT){pdf.addPage();y=M}
+      if(hmm<=BOT-M){if(y+hmm>BOT){pdf.addPage();y=M}put(cv,hmm)}
+      else{const slice=Math.floor((BOT-M)/k*SC);
+        for(let off=0;off<cv.height;off+=slice){const h=Math.min(slice,cv.height-off),c=document.createElement("canvas");
+          c.width=cv.width;c.height=h;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,h);x.drawImage(cv,0,off,cv.width,h,0,0,cv.width,h);
+          if(y>M+1&&y+h/SC*k>BOT){pdf.addPage();y=M}put(c,h/SC*k)}}
+      y+=mb;
+    }
+    const n=pdf.getNumberOfPages();
+    for(let i=1;i<=n;i++){pdf.setPage(i);pdf.setFontSize(8);pdf.setTextColor(150);pdf.text(i+" / "+n,PW/2,PH-6,{align:"center"})}
+    try{pdf.addMetadata("SDMJSON:"+(await buildPayload())+":SDMJSON","http://ns.seodaemun-worksheet.kr/data/")}catch(e){console.warn(e)}
+    pdf.save(pdfName());
+  }finally{host.remove();window.scrollTo(0,sy)}
+}
+$("#savePdf").addEventListener("click",async()=>{
+  const f=state.fields,miss=[["s0-members","모둠원 이름"],["s0-dong","조사할 동"]].filter(([k])=>!has(f[k])).map(x=>x[1]);
+  if(miss.length){toast(miss.join(", ")+"을(를) 시작하기 단계에서 먼저 입력해 주세요.");go(0);return}
+  buildPreview();
+  if(typeof window.html2canvas!=="function"||!window.jspdf){
+    setPdfStatus("PDF 만드는 도구를 불러오지 못했어요(인터넷 연결을 확인하세요). 인쇄 창이 열리면 대상을 ‘PDF로 저장’으로 고르고, 파일 이름을 "+pdfName()+"(으)로 저장하세요.",false);
+    setTimeout(()=>window.print(),200);return;
+  }
+  const btn=$("#savePdf");btn.disabled=true;btn.textContent="PDF 만드는 중…";setPdfStatus("사진이 많으면 몇 초 걸릴 수 있어요. 잠시만 기다려 주세요.",true);
+  try{
+    await makePdf();
+    const t=new Date();setPdfStatus(`${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")}에 ${pdfName()} 파일을 저장했어요. 이 파일을 선생님께 제출하세요.`,true);
+    toast("PDF를 저장했어요.");
+  }catch(e){console.error(e);setPdfStatus("PDF를 만들지 못했어요. 인쇄 창에서 ‘PDF로 저장’을 골라 저장해 주세요.",false);window.print()}
+  finally{btn.disabled=false;btn.textContent="PDF로 저장"}
+});
+
+/* ---------------- 제출 데이터(PDF 안에 함께 저장) ---------------- */
+const APP_ID="seodaemun-change-worksheet";
+function shrink(d,max){return new Promise(res=>{const im=new Image();im.onload=()=>{const sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");
+  c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.72))};im.onerror=()=>res(null);im.src=d})}
+async function buildPayload(){
+  const ev={},ids=["ap-past","ap-now",...state.lists.extra.map(i=>"extra-"+i),...state.lists.prob.map(i=>"prob-"+i)];
+  for(const id of ids){const im=firstImg(id);if(im){const t=await shrink(im,520);if(t)ev[id]=[{name:"",type:"image",data:t}]}}
+  const json=JSON.stringify({app:APP_ID,kind:"pdf-data",v:1,savedAt:new Date().toISOString(),fields:state.fields,lists:state.lists,evidence:ev});
+  const u=new TextEncoder().encode(json);let bin="";for(let i=0;i<u.length;i+=8192)bin+=String.fromCharCode.apply(null,u.subarray(i,i+8192));
+  return btoa(bin);
+}
+function withState(d,fn){const keep=state;state={fields:d.fields||{},evidence:d.evidence||{},lists:Object.assign({extra:[],prob:[]},d.lists||{}),at:d.savedAt||null};try{return fn()}finally{state=keep}}
+
+/* ---------------- 교사용: 제출물 모아 보기 ---------------- */
+let subs=[],cur=0,two=false,view="all";
+const grpCmp=(a,b)=>a==="기타"?1:b==="기타"?-1:a.localeCompare(b,"ko",{numeric:true});
+function parseName(fn){const b=fn.replace(/\.(pdf|json)$/i,"").replace(/\s*\(\d+\)$/,""),m=b.match(/^서대문구조사_([^_]+)_(.+)$/);return m?{team:m[1],name:m[2].replace(/_/g," ")}:{team:"기타",name:b}}
+function openTeacher(){$(".layout").hidden=true;$("#teacherView").hidden=false;try{history.replaceState(null,"","#teacher")}catch(e){}window.scrollTo(0,0);renderTeacher()}
+function closeTeacher(){$("#teacherView").hidden=true;$(".layout").hidden=false;go(Math.max(0,steps.findIndex(s=>s.classList.contains("active"))))}
+$("#openTeacher").addEventListener("click",openTeacher);$("#closeTeacher").addEventListener("click",closeTeacher);
+async function readSub(f){
+  if(/\.json$/i.test(f.name)||f.type==="application/json"){const d=JSON.parse(await f.text());if(!d||d.app!==APP_ID||!d.fields)throw new Error("bad");return {file:f.name,url:null,data:d}}
+  const buf=await f.arrayBuffer(),txt=new TextDecoder("latin1").decode(buf);let data=null;
+  const a=txt.lastIndexOf("SDMJSON:");if(a>=0){const b=txt.indexOf(":SDMJSON",a);if(b>a){try{const bin=atob(txt.slice(a+8,b).replace(/\s/g,""));data=JSON.parse(new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0))))}catch(e){data=null}}}
+  return {file:f.name,url:URL.createObjectURL(f),data};
+}
+async function importFiles(files){
+  const list=Array.from(files).filter(f=>/\.(pdf|json)$/i.test(f.name)||/pdf|json/.test(f.type));
+  if(!list.length){toast("PDF나 작업 파일(.json)을 넣어 주세요.");return}
+  let ok=0,bad=0,noData=0;
+  for(const f of list){try{const r=await readSub(f);
+    const nm=r.data?{team:String(r.data.fields["s0-dong"]||"").trim()||"동 미입력",name:String(r.data.fields["s0-members"]||"").trim()||"모둠원 미입력"}:parseName(f.name);
+    const item={...r,...nm};if(!r.data)noData++;
+    const i=subs.findIndex(x=>x.file===f.name);if(i>=0){if(subs[i].url)URL.revokeObjectURL(subs[i].url);subs[i]=item}else subs.push(item);ok++}catch(e){bad++}}
+  subs.sort((a,b)=>grpCmp(a.team,b.team)||a.name.localeCompare(b.name,"ko"));
+  cur=0;renderTeacher();
+  toast(`${ok}개 파일을 불러왔어요.`+(noData?` ${noData}개는 작성 내용이 들어 있지 않아 PDF 원본으로만 볼 수 있어요.`:"")+(bad?` ${bad}개는 이 학습지의 파일이 아니에요.`:""));
+}
+$("#tFiles").addEventListener("change",function(){importFiles(this.files);this.value=""});
+const tDrop=$("#tDrop");
+["dragenter","dragover"].forEach(t=>tDrop.addEventListener(t,e=>{e.preventDefault();tDrop.classList.add("over")}));
+["dragleave","drop"].forEach(t=>tDrop.addEventListener(t,e=>{e.preventDefault();tDrop.classList.remove("over")}));
+tDrop.addEventListener("drop",e=>{if(e.dataTransfer&&e.dataTransfer.files)importFiles(e.dataTransfer.files)});
+const shown=()=>{const t=$("#tTeam").value;return t?subs.filter(x=>x.team===t):subs};
+const clip=(t,n)=>{t=String(t||"").trim();return t.length>n?t.slice(0,n)+"…":t};
+const gsec=(title,body)=>`<div class="g-sec"><h5>${title}</h5>${body}</div>`;
+const gtext=v=>has(v)?`<p>${esc(v)}</p>`:'<div class="g-none">작성하지 않았어요</div>';
+const ITEMS=[
+  ["sg","분야별 변화",x=>withState(x.data,()=>chgTable())],
+  ["rate","지표별 변화율 그래프",x=>withState(x.data,()=>{const r=statRows().filter(r=>r.rate!==null);return r.length?rateSVG(r):'<div class="g-none">변화율을 계산할 지표가 없어요</div>'})],
+  ["cmp-sum","분야별 변화 종합"],
+  ["prob","공간 변화가 초래한 양상",x=>withState(x.data,()=>{const f=state.fields,l=state.lists.prob.filter(id=>has(f[`prob-${id}-title`])||has(f[`prob-${id}-cause`]));return l.length?l.map((id,i)=>{const p=`prob-${id}-`,refs=selectedRefs(id);return gsec(`양상 ${i+1}`,`<p><b>공간 변화</b> ${esc(f[p+"cause"]||"-")}</p><p style="margin-top:4px"><b>→ 초래한 양상</b> ${esc(f[p+"title"]||"-")}</p>`+(has(f[p+"evid"])?`<p style="margin-top:4px"><b>근거</b> ${esc(f[p+"evid"])}</p>`:"")+(refs.length?`<div class="ref-show" style="grid-template-columns:1fr;margin-top:6px">${refs.map(r=>r.html).join("")}</div>`:""))}).join(""):'<div class="g-none">작성하지 않았어요</div>'})],
+  ["s4-conclusion","오늘의 탐구 정리"]
+];
+function overviewCard(x,i){
+  if(!x.data)return `<article class="g-card"><header><h4>${esc(x.team)}</h4><p>${esc(x.name)}</p></header><div class="g-body"><div class="g-none">이 PDF에는 작성 내용이 함께 저장되어 있지 않아요(인쇄 기능으로 만든 PDF 등). PDF 원본으로 확인하세요.</div></div><div class="g-acts">${x.url?`<button class="btn btn-ghost btn-sm" data-act="pdf" data-i="${i}">PDF 원본</button>`:""}</div></article>`;
+  return withState(x.data,()=>{const f=state.fields,rows=statRows(),rated=rows.filter(r=>r.rate!==null),probs=state.lists.prob.map(id=>f[`prob-${id}-title`]).filter(has);
+    return `<article class="g-card"><header><h4>${esc(x.team)}</h4><p>${esc(x.name)}</p></header><div class="g-body">
+      ${rated.length?gsec("지표별 변화율",rateSVG(rated)):""}
+      ${gsec("분야별 변화 종합",gtext(f["cmp-sum"]))}
+      ${STAT_CATS.map(c=>has(f["an-"+c.k])?gsec(c.n,gtext(f["an-"+c.k])):"").join("")}
+      ${probs.length?gsec("공간 변화가 초래한 양상",`<div class="g-tags">${probs.map(t=>`<span>${esc(clip(t,40))}</span>`).join("")}</div>`):""}
+    </div><div class="g-acts"><button class="btn btn-primary btn-sm" data-act="detail" data-i="${i}">자세히 보기</button>${x.url?`<button class="btn btn-ghost btn-sm" data-act="pdf" data-i="${i}">PDF 원본</button>`:""}</div></article>`});
+}
+function itemCard(x,key){
+  const it=ITEMS.find(t=>t[0]===key);let body;
+  if(!x.data)body='<div class="g-none">작성 내용이 없는 PDF예요. PDF 원본으로 확인하세요.</div>';
+  else body=it[2]?it[2](x):gtext(x.data.fields[key]);
+  return `<article class="g-card i-card"><header><h4>${esc(x.team)}</h4><p>${esc(x.name)}</p></header><div class="g-body">${body}</div></article>`;
+}
+function setView(v){view=v;$$("[data-view]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.view===v)));$("#vAll").hidden=v!=="all";$("#vItem").hidden=v!=="item";$("#vPdf").hidden=v!=="pdf";renderTeacher()}
+$$("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("#tItemSel").innerHTML=ITEMS.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join("");
+$("#tItemSel").addEventListener("change",renderTeacher);
+const label=x=>x.name||x.file;
+function renderTeacher(){
+  const any=subs.length>0;$("#tBody").hidden=!any;$("#tEmpty").hidden=any;if(!any)return;
+  const teams=[...new Set(subs.map(x=>x.team))].sort(grpCmp);
+  const sel=$("#tTeam"),v=sel.value;sel.innerHTML='<option value="">전체</option>'+teams.map(t=>`<option${t===v?" selected":""}>${esc(t)}</option>`).join("");
+  $("#tStats").innerHTML=[[subs.length+"개","제출물"],[subs.filter(x=>x.data).length+"개","내용을 모아 볼 수 있는 제출물"],[teams.filter(t=>t!=="기타").length+"개","조사한 동"]].map(([b,t])=>`<div class="t-stat"><b>${b}</b><span>${t}</span></div>`).join("");
+  const list=shown();
+  if(view==="all")$("#tGrid").innerHTML=list.map((x,i)=>overviewCard(x,i)).join("");
+  if(view==="item")$("#tItem").innerHTML=list.map(x=>itemCard(x,$("#tItemSel").value)).join("");
+  if(view==="pdf"){
+    const pl=list.filter(x=>x.url);if(cur>=pl.length)cur=Math.max(0,pl.length-1);
+    let h="",last=null;pl.forEach((x,i)=>{if(x.team!==last){h+=`<h4>${esc(x.team)}</h4>`;last=x.team}h+=`<button type="button" data-pi="${i}" class="${i===cur||(two&&i===cur+1)?"on":""}">${esc(label(x))}<small>${esc(x.file)}</small></button>`});
+    $("#tSide").innerHTML=h||'<p class="hint" style="padding:8px">PDF 파일이 없어요.</p>';
+    const step=two?2:1;$("#tPos").textContent=pl.length?`${cur+1}${two&&cur+1<pl.length?"–"+(cur+2):""} / ${pl.length}`:"";
+    $("#tPrev").disabled=cur<=0;$("#tNext").disabled=cur+step>=pl.length;
+    const panes=$("#tPanes");panes.className="t-panes"+(two?" two":"");
+    panes.innerHTML=pl.slice(cur,cur+step).map(x=>`<div class="t-pane"><div class="t-pane-head"><b>${esc(x.team)} · ${esc(label(x))}</b><a href="${x.url}" target="_blank" rel="noopener">새 탭에서 열기</a></div><iframe src="${x.url}#view=FitH" title="${esc(x.file)}"></iframe></div>`).join("");
+  }
+}
+const pdfList=()=>shown().filter(x=>x.url);
+$("#tSide").addEventListener("click",e=>{const b=e.target.closest("[data-pi]");if(!b)return;cur=+b.dataset.pi;renderTeacher()});
+$("#tTeam").addEventListener("change",()=>{cur=0;renderTeacher()});
+$("#tPrev").addEventListener("click",()=>{cur=Math.max(0,cur-(two?2:1));renderTeacher()});
+$("#tNext").addEventListener("click",()=>{if(cur+(two?2:1)<pdfList().length){cur+=two?2:1;renderTeacher()}});
+$("#vOne").addEventListener("click",()=>{two=false;$("#vOne").setAttribute("aria-pressed","true");$("#vTwo").setAttribute("aria-pressed","false");renderTeacher()});
+$("#vTwo").addEventListener("click",()=>{two=true;$("#vTwo").setAttribute("aria-pressed","true");$("#vOne").setAttribute("aria-pressed","false");renderTeacher()});
+$("#tClear").addEventListener("click",()=>{if(confirm("불러온 제출물을 모두 화면에서 지울까요? 원래 파일은 그대로 남아 있어요.")){subs.forEach(x=>x.url&&URL.revokeObjectURL(x.url));subs=[];cur=0;renderTeacher()}});
+$("#teacherView").addEventListener("click",e=>{
+  const z=e.target.closest("[data-tzoom]");if(z){zoom(z.src);return}
+  const b=e.target.closest("[data-act]");if(!b)return;const list=shown(),x=list[+b.dataset.i];if(!x)return;
+  if(b.dataset.act==="pdf"){cur=Math.max(0,pdfList().indexOf(x));setView("pdf");window.scrollTo(0,$("#tBody").offsetTop-80)}
+  else openDetail(list.filter(y=>y.data),list.filter(y=>y.data).indexOf(x));
+});
+let rList=[],rIdx=0;
+function openDetail(list,i){rList=list;rIdx=i;showDetail();$("#reportModal").hidden=false;$("#rmClose").focus()}
+function showDetail(){const x=rList[rIdx];$("#rmTitle").textContent=`${x.team} · ${x.name} (${rIdx+1}/${rList.length})`;$("#rmBody").innerHTML=withState(x.data,buildReport);$(".modal-body").scrollTop=0;$("#rmPrev").disabled=rIdx===0;$("#rmNext").disabled=rIdx>=rList.length-1}
+$("#rmPrev").addEventListener("click",()=>{if(rIdx>0){rIdx--;showDetail()}});
+$("#rmNext").addEventListener("click",()=>{if(rIdx<rList.length-1){rIdx++;showDetail()}});
+$("#rmClose").addEventListener("click",()=>{$("#reportModal").hidden=true});
+$("#reportModal").addEventListener("click",e=>{if(e.target.id==="reportModal")$("#reportModal").hidden=true});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#reportModal").hidden){$("#reportModal").hidden=true;return}
+  if($("#teacherView").hidden||view!=="pdf"||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  if(e.key==="ArrowRight")$("#tNext").click();else if(e.key==="ArrowLeft")$("#tPrev").click();});
+
+/* ---------------- 시작 ---------------- */
+setupEvidence(document);bindFields(document);
+$$("[data-slot]").forEach(b=>renderSlot(b.dataset.slot));
+state.fields["p-stat"]=true;
+renderAllLists();fillFields(document);
+updateDerived();updateProgress();
+dirty=false;
+const hash0=location.hash,m=hash0.match(/step(\d)/),start=m?+m[1]:0;
+go(start>=0&&start<=LAST?start:0);
+if(hash0==="#teacher")openTeacher();
+})();
+</script>
+</body>
+</html>
